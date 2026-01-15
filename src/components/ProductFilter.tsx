@@ -14,7 +14,7 @@ interface ProductFilterProps {
     onClearFilters: () => void;
 }
 
-const ProductFilter: React.FC<ProductFilterProps> = ({
+const ProductFilter = ({
     products,
     selectedColor,
     selectedSize,
@@ -23,7 +23,7 @@ const ProductFilter: React.FC<ProductFilterProps> = ({
     onSizeChange,
     onCategoryChange,
     onClearFilters,
-}) => {
+}: ProductFilterProps) => {
     // Extract unique colors from all product variants
     const availableColors = useMemo(() => {
         const colors = new Set<string>();

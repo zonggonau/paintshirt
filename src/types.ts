@@ -27,9 +27,18 @@ export type SnipcartWebhookEvent =
   | "taxes.calculate"
   | "customauth:customer_updated";
 
+export interface SnipcartItem {
+  id: string;
+  name: string;
+  quantity: number;
+  price: number;
+  totalPrice: number;
+  [key: string]: any;
+}
+
 export interface SnipcartWebhookContent {
   discounts: { [key: string]: any };
-  items: { [key: string]: any };
+  items: SnipcartItem[];
   shippingAddress: {
     fullName: string;
     firstName?: string;
