@@ -3,8 +3,9 @@
 import { useState, useMemo } from "react";
 import useWishlistDispatch from "../hooks/useWishlistDispatch";
 import useWishlistState from "../hooks/useWishlistState";
+import { PrintfulProduct } from "../types";
 
-export default function ProductDetailClient({ product }: { product: any }) {
+export default function ProductDetailClient({ product }: { product: PrintfulProduct }) {
     const wishlistDispatch = useWishlistDispatch();
     const wishlistState = useWishlistState();
 
@@ -19,11 +20,13 @@ export default function ProductDetailClient({ product }: { product: any }) {
     );
 
     const activeVariant = variants.find(
-        (v: any) => v.external_id === activeVariantExternalId
+        (v) => v.external_id === activeVariantExternalId
     );
 
+    if (!activeVariant) return null;
+
     const activeVariantFile = activeVariant.files.find(
-        ({ type }: any) => type === "preview"
+        ({ type }) => type === "preview"
     );
 
     const formattedPrice = new Intl.NumberFormat("en-US", {
@@ -37,17 +40,17 @@ export default function ProductDetailClient({ product }: { product: any }) {
     // Extract unique sizes and colors
     const uniqueSizes = useMemo(() => {
         const sizes = variants
-            .map((v: any) => v.size)
-            .filter(Boolean)
-            .filter((v: any, i: number, arr: any[]) => arr.indexOf(v) === i);
+            .map((v) => v.size)
+            .filter((s): s is string => !!s)
+            .filter((v, i, arr) => arr.indexOf(v) === i);
         return sizes;
     }, [variants]);
 
     const uniqueColors = useMemo(() => {
         const colors = variants
-            .map((v: any) => v.color)
-            .filter(Boolean)
-            .filter((v: any, i: number, arr: any[]) => arr.indexOf(v) === i);
+            .map((v) => v.color)
+            .filter((c): c is string => !!c)
+            .filter((v, i, arr) => arr.indexOf(v) === i);
         return colors;
     }, [variants]);
 
@@ -57,8 +60,8 @@ export default function ProductDetailClient({ product }: { product: any }) {
     const handleSizeChange = (size: string) => {
         setSelectedSize(size);
         const variant =
-            variants.find((v: any) => v.size === size && v.color === selectedColor) ||
-            variants.find((v: any) => v.size === size);
+            variants.find((v) => v.size === size && v.color === selectedColor) ||
+            variants.find((v) => v.size === size);
 
         if (variant) {
             setActiveVariantExternalId(variant.external_id);
@@ -73,8 +76,8 @@ export default function ProductDetailClient({ product }: { product: any }) {
     const handleColorChange = (color: string) => {
         setSelectedColor(color);
         const variant =
-            variants.find((v: any) => v.color === color && v.size === selectedSize) ||
-            variants.find((v: any) => v.color === color);
+            variants.find((v) => v.color === color && v.size === selectedSize) ||
+            variants.find((v) => v.color === color);
 
         if (variant) {
             setActiveVariantExternalId(variant.external_id);
@@ -91,7 +94,7 @@ export default function ProductDetailClient({ product }: { product: any }) {
             {/* Product Title & Price */}
             <div>
                 <div className="flex items-start justify-between mb-2">
-                    <h1 className="text-3xl lg:text-4xl font-bold text-gray-900">{name}</h1>
+                    <h1 className="text-2xl lg:text-4xl font-bold text-gray-900">{name}</h1>
                     <button
                         onClick={addToWishlist}
                         className="p-3 rounded-full bg-gray-100 hover:bg-pink-50 transition group"
@@ -122,7 +125,7 @@ export default function ProductDetailClient({ product }: { product: any }) {
                 </div>
 
                 <div className="flex items-baseline space-x-3 mb-4">
-                    <p className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                    <p className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                         {formattedPrice}
                     </p>
                     {variants.length > 1 && (
@@ -206,7 +209,7 @@ export default function ProductDetailClient({ product }: { product: any }) {
                     data-item-price={activeVariant.retail_price}
                     data-item-url={`/api/products/${activeVariantExternalId}`}
                     data-item-description={activeVariant.name}
-                    data-item-image={activeVariantFile.preview_url}
+                    data-item-image={activeVariantFile?.preview_url || ""}
                     data-item-name={name}
                 >
                     <svg

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { PrintfulProduct } from "../types";
+import { getCategoryFromProduct } from "../lib/product-category";
 import Product from "./Product";
 import SearchBar from "./SearchBar";
 import ProductFilter from "./ProductFilter";
@@ -16,6 +17,10 @@ const ProductGrid: React.FC<ProductGridProps> = ({ products }) => {
     const [selectedSize, setSelectedSize] = useState("");
     const [selectedCategory, setSelectedCategory] = useState("");
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const productsPerPage = 20;
 
     // Filter products
     const filteredProducts = useMemo(() => {
@@ -33,12 +38,28 @@ const ProductGrid: React.FC<ProductGridProps> = ({ products }) => {
                 : true;
 
             const matchesCategory = selectedCategory
-                ? product.name.toLowerCase().includes(selectedCategory.toLowerCase())
+                ? getCategoryFromProduct(product) === selectedCategory
                 : true;
 
             return matchesSearch && matchesColor && matchesSize && matchesCategory;
         });
     }, [products, searchQuery, selectedColor, selectedSize, selectedCategory]);
+
+    // Reset to first page when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, selectedColor, selectedSize, selectedCategory]);
+
+    // Pagination Logic
+    const indexOfLastProduct = currentPage * productsPerPage;
+    const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
+    const currentProducts = filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct);
+    const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+
+    const paginate = (pageNumber: number) => {
+        setCurrentPage(pageNumber);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
 
     const clearFilters = () => {
         setSearchQuery("");
@@ -87,8 +108,8 @@ const ProductGrid: React.FC<ProductGridProps> = ({ products }) => {
                     <button
                         onClick={() => setIsFilterOpen(!isFilterOpen)}
                         className={`flex-shrink-0 flex items-center gap-2 px-6 py-4 border-2 rounded-xl font-semibold transition ${isFilterOpen || hasActiveFilters
-                                ? "border-indigo-600 bg-indigo-50 text-indigo-700"
-                                : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                            ? "border-indigo-600 bg-indigo-50 text-indigo-700"
+                            : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
                             }`}
                     >
                         <svg
@@ -149,11 +170,53 @@ const ProductGrid: React.FC<ProductGridProps> = ({ products }) => {
 
             {/* Product Grid */}
             {filteredProducts.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {filteredProducts.map((product) => (
-                        <Product key={product.id} {...product} />
-                    ))}
-                </div>
+                <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {currentProducts.map((product) => (
+                            <Product key={product.id} {...product} />
+                        ))}
+                    </div>
+
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                        <div className="flex justify-center items-center mt-12 space-x-2">
+                            <button
+                                onClick={() => paginate(currentPage - 1)}
+                                disabled={currentPage === 1}
+                                className={`px-4 py-2 border rounded-lg transition ${currentPage === 1
+                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                    : "bg-white text-gray-700 hover:bg-gray-50 border-gray-300"
+                                    }`}
+                            >
+                                Previous
+                            </button>
+
+                            {[...Array(totalPages)].map((_, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => paginate(i + 1)}
+                                    className={`w-10 h-10 border rounded-lg font-medium transition ${currentPage === i + 1
+                                        ? "bg-indigo-600 text-white border-indigo-600"
+                                        : "bg-white text-gray-700 hover:bg-gray-50 border-gray-300"
+                                        }`}
+                                >
+                                    {i + 1}
+                                </button>
+                            ))}
+
+                            <button
+                                onClick={() => paginate(currentPage + 1)}
+                                disabled={currentPage === totalPages}
+                                className={`px-4 py-2 border rounded-lg transition ${currentPage === totalPages
+                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                    : "bg-white text-gray-700 hover:bg-gray-50 border-gray-300"
+                                    }`}
+                            >
+                                Next
+                            </button>
+                        </div>
+                    )}
+                </>
             ) : (
                 <div className="text-center py-16">
                     <div className="inline-flex items-center justify-center w-20 h-20 bg-gray-100 rounded-full mb-4">

@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { PrintfulProduct } from "../types";
+import { getCategoryFromProduct } from "../lib/product-category";
 
 interface ProductFilterProps {
     products: PrintfulProduct[];
@@ -63,21 +64,19 @@ const ProductFilter = ({
     const availableCategories = useMemo(() => {
         const categories = new Set<string>();
         products.forEach((product) => {
-            // Extract category from product name (e.g., "T-Shirt", "Mug", "Hoodie")
-            const name = product.name.toLowerCase();
-            if (name.includes("t-shirt") || name.includes("tshirt")) {
-                categories.add("T-Shirts");
-            } else if (name.includes("hoodie") || name.includes("sweatshirt")) {
-                categories.add("Hoodies");
-            } else if (name.includes("mug")) {
-                categories.add("Mugs");
-            } else if (name.includes("tank")) {
-                categories.add("Tank Tops");
-            } else {
-                categories.add("Other");
-            }
+            categories.add(getCategoryFromProduct(product));
         });
-        return Array.from(categories).sort();
+
+        // Remove "Other" if it exists and sort, then append Other at end if needed
+        const catArray = Array.from(categories);
+        const hasOther = catArray.includes("Other");
+        const sorted = catArray.filter(c => c !== "Other").sort();
+
+        if (hasOther) {
+            sorted.push("Other");
+        }
+
+        return sorted;
     }, [products]);
 
     const hasActiveFilters = selectedColor || selectedSize || selectedCategory;

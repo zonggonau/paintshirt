@@ -5,6 +5,9 @@ import { PrintfulProduct } from "../src/types";
 import { productCache } from "../src/lib/product-cache";
 import ProductGrid from "../src/components/ProductGrid";
 
+export const revalidate = 60; // Revalidate every 60 seconds
+
+
 async function getProducts(): Promise<{ products: PrintfulProduct[]; error?: string }> {
   try {
     // Check cache first
@@ -76,13 +79,13 @@ export default async function Home() {
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="animate-fade-in">
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-white mb-6 leading-tight">
+            <h1 className="text-3xl md:text-6xl lg:text-7xl font-extrabold text-white mb-6 leading-tight">
               Express Yourself with
               <span className="block mt-2 bg-gradient-to-r from-yellow-200 to-pink-200 bg-clip-text text-transparent">
                 Premium Apparel
               </span>
             </h1>
-            <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-3xl mx-auto">
+            <p className="text-lg md:text-2xl text-white/90 mb-8 max-w-3xl mx-auto">
               Discover unique, high-quality print-on-demand products that showcase your style.
               Free worldwide shipping on all orders.
             </p>

@@ -5,6 +5,9 @@ import { printful, fetchWithRetry } from "../../../src/lib/printful-client";
 import { formatVariantName } from "../../../src/lib/format-variant-name";
 import ProductDetailClient from "../../../src/components/ProductDetailClient";
 
+export const revalidate = 60; // Revalidate every 60 seconds
+
+
 async function getProduct(id: string) {
     try {
         const response = await fetchWithRetry<any>(

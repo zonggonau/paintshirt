@@ -40,6 +40,8 @@ const Product = (product: any) => {
 
     const onWishlist = isSaved(id);
 
+    const truncatedName = name.length > 15 ? name.substring(0, 15) + "..." : name;
+
     return (
         <Link href={`/products/${id}`}>
             <article className="group relative bg-white rounded-2xl overflow-hidden hover-lift shadow-md hover:shadow-2xl transition-all duration-300 animate-scale-in cursor-pointer">
@@ -98,12 +100,12 @@ const Product = (product: any) => {
 
                 {/* Product Info */}
                 <div className="p-5">
-                    <h3 className="font-semibold text-gray-900 mb-3 line-clamp-2 text-lg hover:text-indigo-600 transition">
-                        {name}
+                    <h3 className="font-semibold text-gray-900 mb-3 text-sm md:text-lg hover:text-indigo-600 transition" title={name}>
+                        {truncatedName}
                     </h3>
 
                     <div className="flex items-center justify-between">
-                        <p className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                        <p className="text-lg md:text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                             {formattedPrice}
                         </p>
                         {variants.length > 1 && (
