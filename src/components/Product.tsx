@@ -46,7 +46,7 @@ const Product = (product: any) => {
                 <button
                     onClick={addToWishlist}
                     aria-label="Add to wishlist"
-                    className="absolute top-4 right-4 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-all shadow-lg group/wishlist"
+                    className="absolute top-4 right-4 z-1 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-all shadow-lg group/wishlist"
                 >
                     {onWishlist ? (
                         <svg
