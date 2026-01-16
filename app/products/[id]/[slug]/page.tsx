@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
-import ProductDetailImages from "../../../src/components/ProductDetailImages";
-import { printful, fetchWithRetry } from "../../../src/lib/printful-client";
-import { formatVariantName } from "../../../src/lib/format-variant-name";
-import ProductDetailClient from "../../../src/components/ProductDetailClient";
+import ProductDetailImages from "../../../../src/components/ProductDetailImages";
+import { printful, fetchWithRetry } from "../../../../src/lib/printful-client";
+import { formatVariantName } from "../../../../src/lib/format-variant-name";
+import ProductDetailClient from "../../../../src/components/ProductDetailClient";
+import RelatedProducts from "../../../../src/components/RelatedProducts";
+import { productCache } from "../../../../src/lib/product-cache";
 
 export const revalidate = 60; // Revalidate every 60 seconds
 
@@ -29,11 +31,7 @@ async function getProduct(id: string) {
     }
 }
 
-// Re-use logic from app/page.tsx or move to a shared lib
-import { productCache } from "../../../src/lib/product-cache";
-import RelatedProducts from "../../../src/components/RelatedProducts";
-
-// Shared function to fetch all products (could be moved to src/lib/products.ts)
+// Shared function to fetch all products for Related Products section
 async function getAllProducts() {
     try {
         const cachedProducts = productCache.get();
@@ -76,9 +74,9 @@ async function getAllProducts() {
 export async function generateMetadata({
     params,
 }: {
-    params: Promise<{ id: string }>;
+    params: Promise<{ id: string; slug: string }>;
 }): Promise<Metadata> {
-    const { id } = await params;
+    const { id, slug } = await params;
     const product = await getProduct(id);
 
     if (!product) {
@@ -125,7 +123,7 @@ export async function generateMetadata({
         openGraph: {
             title: `${product.name} - PrintfulTshirt`,
             description,
-            url: `https://printfultshirt.com/products/${id}`,
+            url: `https://printfultshirt.com/products/${id}/${slug}`,
             siteName: "PrintfulTshirt",
             images: [
                 {
@@ -157,7 +155,7 @@ export async function generateMetadata({
             },
         },
         alternates: {
-            canonical: `https://printfultshirt.com/products/${id}`,
+            canonical: `https://printfultshirt.com/products/${id}/${slug}`,
         },
     };
 }
@@ -165,9 +163,9 @@ export async function generateMetadata({
 export default async function ProductDetailPage({
     params,
 }: {
-    params: Promise<{ id: string }>;
+    params: Promise<{ id: string; slug: string }>;
 }) {
-    const { id } = await params;
+    const { id, slug } = await params;
     const [product, allProducts] = await Promise.all([
         getProduct(id),
         getAllProducts()
@@ -201,7 +199,7 @@ export default async function ProductDetailPage({
         },
         offers: {
             "@type": "AggregateOffer",
-            url: `https://paintshirt.com/products/${id}`,
+            url: `https://paintshirt.com/products/${id}/${slug}`,
             priceCurrency: firstVariant.currency,
             lowPrice: Math.min(...product.variants.map((v: any) => v.retail_price)),
             highPrice: Math.max(...product.variants.map((v: any) => v.retail_price)),

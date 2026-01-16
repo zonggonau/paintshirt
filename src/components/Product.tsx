@@ -7,6 +7,8 @@ import Link from "next/link";
 import useWishlistDispatch from "../hooks/useWishlistDispatch";
 import useWishlistState from "../hooks/useWishlistState";
 
+import { slugify } from "../lib/slugify";
+
 const Product = (product: any) => {
     const wishlistDispatch = useWishlistDispatch();
     const wishlistState = useWishlistState();
@@ -41,9 +43,10 @@ const Product = (product: any) => {
     const onWishlist = isSaved(id);
 
     const truncatedName = name.length > 15 ? name.substring(0, 15) + "..." : name;
+    const slug = slugify(name);
 
     return (
-        <Link href={`/products/${id}`}>
+        <Link href={`/products/${id}/${slug}`}>
             <article className="group relative bg-white rounded-2xl overflow-hidden hover-lift shadow-md hover:shadow-2xl transition-all duration-300 animate-scale-in cursor-pointer">
                 <button
                     onClick={addToWishlist}
