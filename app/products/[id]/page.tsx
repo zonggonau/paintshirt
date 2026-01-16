@@ -29,7 +29,50 @@ async function getProduct(id: string) {
     }
 }
 
-// SEO Metadata Generation
+// Re-use logic from app/page.tsx or move to a shared lib
+import { productCache } from "../../../src/lib/product-cache";
+import RelatedProducts from "../../../src/components/RelatedProducts";
+
+// Shared function to fetch all products (could be moved to src/lib/products.ts)
+async function getAllProducts() {
+    try {
+        const cachedProducts = productCache.get();
+        if (cachedProducts) return cachedProducts;
+
+        // Fetch product IDs
+        const productIdsResponse = await fetchWithRetry<any>(
+            () => printful.get("sync/products")
+        );
+        const productIds = productIdsResponse.result;
+
+        // Fetch all products
+        const allProducts = await Promise.all(
+            productIds.map(async ({ id }: any) =>
+                await fetchWithRetry<any>(() => printful.get(`sync/products/${id}`))
+            )
+        );
+
+        const products = allProducts.map(
+            (response: any) => {
+                const { sync_product, sync_variants } = response.result;
+                return {
+                    ...sync_product,
+                    variants: sync_variants.map(({ name, ...variant }: any) => ({
+                        name: formatVariantName(name),
+                        ...variant,
+                    })),
+                };
+            }
+        );
+
+        productCache.set(products);
+        return products;
+    } catch (error) {
+        console.error("Error fetching all products:", error);
+        return [];
+    }
+}
+
 export async function generateMetadata({
     params,
 }: {
@@ -62,7 +105,7 @@ export async function generateMetadata({
         ...new Set(product.variants.map((v: any) => v.size).filter(Boolean)),
     ];
 
-    const description = `Buy ${product.name} for ${formattedPrice}. Available in ${availableColors.length} colors and ${availableSizes.length} sizes. Premium quality with fast shipping. Shop now at PainTshirt!`;
+    const description = `Buy ${product.name} for ${formattedPrice}. Available in ${availableColors.length} colors and ${availableSizes.length} sizes. Premium quality with fast shipping. Shop now at PrintfulTshirt!`;
 
     const keywords = [
         product.name,
@@ -75,15 +118,15 @@ export async function generateMetadata({
     ].join(", ");
 
     return {
-        title: `${product.name} - ${formattedPrice} | PainTshirt`,
+        title: `${product.name} - ${formattedPrice} | PrintfulTshirt`,
         description,
         keywords,
-        authors: [{ name: "PainTshirt" }],
+        authors: [{ name: "PrintfulTshirt" }],
         openGraph: {
-            title: `${product.name} - PainTshirt`,
+            title: `${product.name} - PrintfulTshirt`,
             description,
-            url: `https://paintshirt.com/products/${id}`,
-            siteName: "PainTshirt",
+            url: `https://printfultshirt.com/products/${id}`,
+            siteName: "PrintfulTshirt",
             images: [
                 {
                     url: previewImage,
@@ -97,10 +140,10 @@ export async function generateMetadata({
         },
         twitter: {
             card: "summary_large_image",
-            title: `${product.name} - PainTshirt`,
+            title: `${product.name} - PrintfulTshirt`,
             description,
             images: [previewImage],
-            creator: "@paintshirt",
+            creator: "@printfultshirt",
         },
         robots: {
             index: true,
@@ -114,7 +157,7 @@ export async function generateMetadata({
             },
         },
         alternates: {
-            canonical: `https://paintshirt.com/products/${id}`,
+            canonical: `https://printfultshirt.com/products/${id}`,
         },
     };
 }
@@ -125,7 +168,10 @@ export default async function ProductDetailPage({
     params: Promise<{ id: string }>;
 }) {
     const { id } = await params;
-    const product = await getProduct(id);
+    const [product, allProducts] = await Promise.all([
+        getProduct(id),
+        getAllProducts()
+    ]);
 
     if (!product) {
         notFound();
@@ -281,6 +327,11 @@ export default async function ProductDetailPage({
                             </div>
                         </div>
                     </div>
+                </div>
+
+                {/* Related Products */}
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+                    <RelatedProducts currentProduct={product} allProducts={allProducts} />
                 </div>
             </div>
         </>

@@ -13,42 +13,59 @@ interface ProductGridProps {
 
 const ProductGrid: React.FC<ProductGridProps> = ({ products }) => {
     const [searchQuery, setSearchQuery] = useState("");
-    const [selectedColor, setSelectedColor] = useState("");
-    const [selectedSize, setSelectedSize] = useState("");
     const [selectedCategory, setSelectedCategory] = useState("");
+    const [sortOption, setSortOption] = useState("");
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
     const productsPerPage = 20;
 
+    // Helper to get minimum price
+    const getProductPrice = (product: PrintfulProduct) => {
+        if (!product.variants || product.variants.length === 0) return 0;
+        return Math.min(...product.variants.map(v => v.retail_price));
+    };
+
     // Filter products
     const filteredProducts = useMemo(() => {
-        return products.filter((product) => {
+        let result = products.filter((product) => {
             const matchesSearch = product.name
                 .toLowerCase()
                 .includes(searchQuery.toLowerCase());
-
-            const matchesColor = selectedColor
-                ? product.variants.some((v) => v.color === selectedColor)
-                : true;
-
-            const matchesSize = selectedSize
-                ? product.variants.some((v) => v.size === selectedSize)
-                : true;
 
             const matchesCategory = selectedCategory
                 ? getCategoryFromProduct(product) === selectedCategory
                 : true;
 
-            return matchesSearch && matchesColor && matchesSize && matchesCategory;
+            return matchesSearch && matchesCategory;
         });
-    }, [products, searchQuery, selectedColor, selectedSize, selectedCategory]);
+
+        // Apply sorting
+        if (sortOption) {
+            result = [...result].sort((a, b) => {
+                switch (sortOption) {
+                    case "name-asc":
+                        return a.name.localeCompare(b.name);
+                    case "name-desc":
+                        return b.name.localeCompare(a.name);
+                    case "price-asc":
+                        return getProductPrice(a) - getProductPrice(b);
+                    case "price-desc":
+                        return getProductPrice(b) - getProductPrice(a);
+                    default:
+                        return 0;
+                }
+            });
+        }
+
+        return result;
+    }, [products, searchQuery, selectedCategory, sortOption]);
 
     // Reset to first page when filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchQuery, selectedColor, selectedSize, selectedCategory]);
+    }, [searchQuery, selectedCategory, sortOption]);
 
     // Pagination Logic
     const indexOfLastProduct = currentPage * productsPerPage;
@@ -63,12 +80,11 @@ const ProductGrid: React.FC<ProductGridProps> = ({ products }) => {
 
     const clearFilters = () => {
         setSearchQuery("");
-        setSelectedColor("");
-        setSelectedSize("");
         setSelectedCategory("");
+        setSortOption("");
     };
 
-    const hasActiveFilters = selectedColor || selectedSize || selectedCategory || searchQuery;
+    const hasActiveFilters = selectedCategory || searchQuery || sortOption;
 
     return (
         <div>
@@ -137,12 +153,10 @@ const ProductGrid: React.FC<ProductGridProps> = ({ products }) => {
                     <div className="mt-4 animate-fade-in">
                         <ProductFilter
                             products={products}
-                            selectedColor={selectedColor}
-                            selectedSize={selectedSize}
                             selectedCategory={selectedCategory}
-                            onColorChange={setSelectedColor}
-                            onSizeChange={setSelectedSize}
+                            sortOption={sortOption}
                             onCategoryChange={setSelectedCategory}
+                            onSortChange={setSortOption}
                             onClearFilters={clearFilters}
                         />
                     </div>

@@ -122,6 +122,37 @@ export default function ProductDetailClient({ product }: { product: PrintfulProd
                             </svg>
                         )}
                     </button>
+                    <button
+                        onClick={() => {
+                            if (navigator.share) {
+                                navigator.share({
+                                    title: name,
+                                    text: `Check out ${name}`,
+                                    url: window.location.href,
+                                });
+                            } else {
+                                navigator.clipboard.writeText(window.location.href);
+                                alert("Link copied to clipboard!");
+                            }
+                        }}
+                        className="p-3 rounded-full bg-gray-100 hover:bg-indigo-50 transition group ml-2"
+                        aria-label="Share product"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="w-6 h-6 text-gray-600 group-hover:text-indigo-600"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                            />
+                        </svg>
+                    </button>
                 </div>
 
                 <div className="flex items-baseline space-x-3 mb-4">
@@ -331,6 +362,16 @@ export default function ProductDetailClient({ product }: { product: PrintfulProd
                     Secure payment processing
                 </div>
             </div>
+
+            {/* Description */}
+            {product.description && (
+                <div className="border-t border-gray-200 pt-6">
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">Description</h3>
+                    <div className="prose prose-sm text-gray-600 leading-relaxed">
+                        <div dangerouslySetInnerHTML={{ __html: product.description }} />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -100,6 +100,7 @@ export interface ISyncProduct {
 export interface PrintfulProduct {
   id: string;
   name: string;
+  description?: string;
   variants: Array<{
     external_id: string;
     name: string;

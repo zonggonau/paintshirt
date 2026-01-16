@@ -37,20 +37,20 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                                 </div>
                             </div>
                             <span className="text-xl md:text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                                PainTshirt
+                                PrintfulTshirt
                             </span>
                         </Link>
 
                         {/* Navigation - Hidden on mobile */}
                         <nav className="hidden md:flex items-center space-x-8">
                             <Link href="/" className="text-sm font-medium text-gray-700 hover:text-indigo-600 transition">
-                                Shop
+                                SHOP
                             </Link>
                             <Link href="/about" className="text-sm font-medium text-gray-700 hover:text-indigo-600 transition">
-                                About
+                                ABOUT
                             </Link>
                             <Link href="/terms-of-sale" className="text-sm font-medium text-gray-700 hover:text-indigo-600 transition">
-                                Terms
+                                TERMS
                             </Link>
                         </nav>
 
@@ -125,7 +125,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                         {/* Brand */}
                         <div>
                             <h3 className="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-4">
-                                PainTshirt
+                                PrintfulTshirt
                             </h3>
                             <p className="text-sm text-gray-600 mb-4">
                                 Premium print-on-demand products, delivered worldwide with love.
@@ -163,32 +163,68 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                             <p className="text-sm text-gray-600 mb-4">
                                 Subscribe to get special offers and new products.
                             </p>
-                            <div className="flex">
+                            <form
+                                onSubmit={(e) => {
+                                    e.preventDefault();
+                                    const form = e.target as HTMLFormElement;
+                                    const input = form.elements.namedItem('email') as HTMLInputElement;
+                                    const email = input.value;
+
+                                    if (email) {
+                                        // Simulate API call
+                                        const btn = form.querySelector('button');
+                                        if (btn) {
+                                            const originalText = btn.innerHTML;
+                                            btn.disabled = true;
+                                            btn.innerHTML = '<span class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>';
+
+                                            setTimeout(() => {
+                                                btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+                                                btn.classList.remove('from-indigo-600', 'to-purple-600');
+                                                btn.classList.add('bg-green-500');
+                                                input.value = '';
+                                                input.placeholder = 'Thanks for subscribing!';
+
+                                                setTimeout(() => {
+                                                    btn.disabled = false;
+                                                    btn.innerHTML = originalText;
+                                                    btn.classList.add('from-indigo-600', 'to-purple-600');
+                                                    btn.classList.remove('bg-green-500');
+                                                    input.placeholder = 'Your email';
+                                                }, 3000);
+                                            }, 1000);
+                                        }
+                                    }
+                                }}
+                                className="flex"
+                            >
                                 <input
                                     type="email"
+                                    name="email"
+                                    required
                                     placeholder="Your email"
-                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm transition-all"
                                 />
-                                <button className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-r-lg hover:from-indigo-700 hover:to-purple-700 transition">
+                                <button type="submit" className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-r-lg hover:from-indigo-700 hover:to-purple-700 transition flex items-center justify-center min-w-[3rem]">
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                                     </svg>
                                 </button>
-                            </div>
+                            </form>
                         </div>
                     </div>
 
                     {/* Bottom Bar */}
                     <div className="border-t border-gray-200 pt-8 mt-8">
                         <p className="text-center text-sm text-gray-500">
-                            © {new Date().getFullYear()} PainTshirt. Powered by{" "}
+                            © {new Date().getFullYear()} PrintfulTshirt. Powered by{" "}
                             <a
-                                href="https://paintshirt.id"
+                                href="https://printfultshirt.com"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-indigo-600 hover:text-indigo-700 font-medium"
                             >
-                                Paintshirt
+                                PrintfulTshirt
                             </a>
 
                         </p>
