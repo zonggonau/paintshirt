@@ -5,7 +5,7 @@ export default function AboutPage() {
                 {/* Header */}
                 <div className="text-center mb-12">
                     <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-                        About PainTshirt
+                        About PrintfulTshirt
                     </h1>
                     <p className="text-lg text-gray-600">
                         Your one-stop shop for high-quality print-on-demand products
@@ -20,7 +20,7 @@ export default function AboutPage() {
                             Our Story
                         </h2>
                         <p className="text-gray-700 leading-relaxed">
-                            Welcome to PainTshirt, your one-stop shop for high-quality print-on-demand products.
+                            Welcome to PrintfulTshirt, your one-stop shop for high-quality print-on-demand products.
                             We're passionate about creating unique, custom products that help you express yourself.
                             Using print-on-demand technology powered by Printful, we ensure that every product is
                             made with care and delivered directly to you.
@@ -73,7 +73,7 @@ export default function AboutPage() {
                             We're here to help!
                         </p>
                         <a
-                            href="mailto:support@paintshirt.com"
+                            href="mailto:support@printfultshirt.com"
                             className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-purple-700 transition shadow-lg"
                         >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

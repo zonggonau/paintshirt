@@ -20,9 +20,9 @@ export default function TermsOfSalePage() {
                             1. General
                         </h2>
                         <p className="text-gray-700 leading-relaxed">
-                            By placing an order with PainTshirt, you agree to these terms and conditions.
+                            By placing an order with PrintfulTshirt, you agree to these terms and conditions.
                             Please read them carefully before making a purchase. These terms constitute a
-                            binding agreement between you and PainTshirt.
+                            binding agreement between you and PrintfulTshirt.
                         </p>
                     </div>
 
@@ -93,9 +93,11 @@ export default function TermsOfSalePage() {
                             7. Returns & Exchanges
                         </h2>
                         <p className="text-gray-700 leading-relaxed">
-                            Due to the custom nature of our products, we only accept returns for defective items.
-                            Please contact us within 14 days of receiving your order if there's an issue. We'll
-                            work with you to resolve any quality concerns.
+                            Any claims for misprinted/damaged/defective items must be submitted within 30 days
+                            after the product has been received. For packages lost in transit, all claims must
+                            be submitted no later than 30 days after the estimated delivery date. Because our
+                            products are printed on demand, we do not refund orders for buyer’s remorse or
+                            wrong size selection.
                         </p>
                     </div>
 
@@ -121,7 +123,7 @@ export default function TermsOfSalePage() {
                             please don't hesitate to contact us.
                         </p>
                         <a
-                            href="mailto:support@paintshirt.com"
+                            href="mailto:support@printfultshirt.com"
                             className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-purple-700 transition shadow-lg"
                         >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
