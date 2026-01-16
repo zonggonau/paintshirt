@@ -4,6 +4,7 @@ import { formatVariantName } from "../src/lib/format-variant-name";
 import { PrintfulProduct } from "../src/types";
 import { productCache } from "../src/lib/product-cache";
 import ProductGrid from "../src/components/ProductGrid";
+import Link from "next/link";
 
 export const revalidate = 60; // Revalidate every 60 seconds
 
@@ -96,14 +97,41 @@ export default async function Home() {
               >
                 Shop Now
               </a>
-              <a
-                href="#products"
-                className="px-8 py-4 border-2 border-white text-white font-semibold rounded-full hover:bg-white/10 transition"
-              >
-                Browse Collection
-              </a>
             </div>
           </div>
+
+          {/* Decorative Floating Product Images */}
+          {products.length > 0 && (
+            <>
+              {/* Left Floating Image */}
+              <div className="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-12 md:left-10 md:translate-x-0 hidden lg:block animate-float-slow">
+                <div className="relative w-64 h-64 rotate-[-12deg] hover:rotate-0 transition duration-500 hover:scale-105 hover:z-10">
+                  <div className="absolute inset-0 bg-white/20 backdrop-blur-md rounded-2xl shadow-2xl transform"></div>
+                  {products[0]?.variants?.[0]?.files?.find((f: any) => f.type === 'preview')?.preview_url && (
+                    <img
+                      src={products[0].variants[0].files.find((f: any) => f.type === 'preview')?.preview_url}
+                      alt="Featured Product"
+                      className="absolute inset-2 w-[calc(100%-16px)] h-[calc(100%-16px)] object-cover rounded-xl shadow-lg"
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Right Floating Image */}
+              <div className="absolute top-1/2 right-0 -translate-y-1/2 translate-x-12 md:right-10 md:translate-x-0 hidden lg:block animate-float-slow delay-700">
+                <div className="relative w-64 h-64 rotate-[12deg] hover:rotate-0 transition duration-500 hover:scale-105 hover:z-10">
+                  <div className="absolute inset-0 bg-white/20 backdrop-blur-md rounded-2xl shadow-2xl transform"></div>
+                  {products[1]?.variants?.[0]?.files?.find((f: any) => f.type === 'preview')?.preview_url && (
+                    <img
+                      src={products[1].variants[0].files.find((f: any) => f.type === 'preview')?.preview_url}
+                      alt="Featured Product"
+                      className="absolute inset-2 w-[calc(100%-16px)] h-[calc(100%-16px)] object-cover rounded-xl shadow-lg"
+                    />
+                  )}
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-8 mt-16 max-w-2xl mx-auto">
@@ -142,7 +170,19 @@ export default async function Home() {
             </div>
           )}
 
-          <ProductGrid products={products} />
+          <ProductGrid products={products.slice(0, 12)} hideFilters={true} />
+
+          <div className="mt-12 text-center">
+            <Link
+              href="/products"
+              className="inline-flex items-center px-8 py-3 bg-white border-2 border-indigo-600 text-indigo-600 font-semibold rounded-full hover:bg-indigo-50 transition transform hover:scale-105 shadow-md"
+            >
+              View All Products
+              <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </Link>
+          </div>
         </div>
       </section>
 

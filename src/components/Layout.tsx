@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import Link from "next/link";
 import useWishlistState from "../hooks/useWishlistState";
 import useSnipcartCount from "../hooks/useSnipcartCount";
@@ -7,6 +9,7 @@ import useSnipcartCount from "../hooks/useSnipcartCount";
 const Layout = ({ children }: { children: React.ReactNode }) => {
     const wishlistState = useWishlistState();
     const { cart } = useSnipcartCount();
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const hasItems = wishlistState?.hasItems || false;
     const cartHasItems = cart.items.count !== 0;
@@ -18,12 +21,12 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16 md:h-20">
                         {/* Logo with Gradient */}
-                        <Link href="/" className="flex items-center space-x-3 group">
+                        <Link href="/" className="flex items-center space-x-2 md:space-x-3 group">
                             <div className="relative">
                                 <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full blur opacity-75 group-hover:opacity-100 transition"></div>
-                                <div className="relative bg-white rounded-full p-2">
+                                <div className="relative bg-white rounded-full p-1.5 md:p-2">
                                     <svg
-                                        className="w-8 h-8 text-indigo-600"
+                                        className="w-6 h-6 md:w-8 md:h-8 text-indigo-600"
                                         viewBox="0 0 70 70"
                                         fill="currentColor"
                                         xmlns="http://www.w3.org/2000/svg"
@@ -36,15 +39,15 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                                     </svg>
                                 </div>
                             </div>
-                            <span className="text-xl md:text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                            <span className="text-lg md:text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent truncate max-w-[120px] md:max-w-none">
                                 PrintfulTshirt
                             </span>
                         </Link>
 
                         {/* Navigation - Hidden on mobile */}
                         <nav className="hidden md:flex items-center space-x-8">
-                            <Link href="/" className="text-sm font-medium text-gray-700 hover:text-indigo-600 transition">
-                                SHOP
+                            <Link href="/products" className="text-sm font-medium text-gray-700 hover:text-indigo-600 transition">
+                                ALL PRODUCTS
                             </Link>
                             <Link href="/about" className="text-sm font-medium text-gray-700 hover:text-indigo-600 transition">
                                 ABOUT
@@ -54,16 +57,16 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                             </Link>
                         </nav>
 
-                        {/* Action Icons */}
-                        <div className="flex items-center space-x-2 md:space-x-4">
+                        {/* Action Icons & Mobile Menu Button */}
+                        <div className="flex items-center gap-1 md:space-x-4">
                             <button
-                                className="snipcart-customer-signin relative p-2 rounded-full hover:bg-gray-100 transition group"
+                                className="snipcart-customer-signin relative p-1.5 md:p-2 rounded-full hover:bg-gray-100 transition group"
                                 aria-label="User login"
                             >
                                 <svg
                                     xmlns="http://www.w3.org/2000/svg"
                                     viewBox="0 0 24 24"
-                                    className="w-6 h-6 text-gray-700 group-hover:text-indigo-600 transition"
+                                    className="w-5 h-5 md:w-6 md:h-6 text-gray-700 group-hover:text-indigo-600 transition"
                                     fill="currentColor"
                                 >
                                     <path d="M4 22a8 8 0 1 1 16 0h-2a6 6 0 1 0-12 0H4zm8-9c-3.315 0-6-2.685-6-6s2.685-6 6-6 6 2.685 6 6-2.685 6-6 6zm0-2c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z" />
@@ -72,16 +75,16 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
                             <Link
                                 href="/wishlist"
-                                className="relative p-2 rounded-full hover:bg-gray-100 transition group"
+                                className="relative p-1.5 md:p-2 rounded-full hover:bg-gray-100 transition group"
                                 aria-label="Wishlist"
                             >
                                 {hasItems && (
-                                    <span className="absolute top-1 right-1 w-2 h-2 bg-pink-500 rounded-full animate-pulse"></span>
+                                    <span className="absolute top-1 right-1 w-1.5 h-1.5 md:w-2 md:h-2 bg-pink-500 rounded-full animate-pulse"></span>
                                 )}
                                 <svg
                                     xmlns="http://www.w3.org/2000/svg"
                                     viewBox="0 0 24 24"
-                                    className="w-6 h-6 text-gray-700 group-hover:text-pink-500 transition"
+                                    className="w-5 h-5 md:w-6 md:h-6 text-gray-700 group-hover:text-pink-500 transition"
                                     fill={hasItems ? "currentColor" : "none"}
                                     stroke="currentColor"
                                     strokeWidth="2"
@@ -91,25 +94,75 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                             </Link>
 
                             <button
-                                className="snipcart-checkout relative p-2 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 transition group"
+                                className="snipcart-checkout relative p-1.5 md:p-2 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 transition group"
                                 aria-label="Cart"
                             >
                                 {cartHasItems && (
-                                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-pink-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-bounce">
+                                    <span className="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-pink-500 text-white text-[10px] md:text-xs font-bold rounded-full flex items-center justify-center animate-bounce">
                                         {cart.items.count}
                                     </span>
                                 )}
                                 <svg
                                     xmlns="http://www.w3.org/2000/svg"
                                     viewBox="0 0 24 24"
-                                    className="w-6 h-6 text-white"
+                                    className="w-5 h-5 md:w-6 md:h-6 text-white"
                                     fill="currentColor"
                                 >
                                     <path d="M4 16V4H2V2h3a1 1 0 0 1 1 1v12h12.438l2-8H8V5h13.72a1 1 0 0 1 .97 1.243l-2.5 10a1 1 0 0 1-.97.757H5a1 1 0 0 1-1-1zm2 7a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm12 0a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" />
                                 </svg>
                             </button>
+
+                            {/* Mobile Menu Button */}
+                            <button
+                                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                                className="md:hidden p-1.5 text-gray-700 hover:text-indigo-600 transition"
+                                aria-label="Menu"
+                            >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    {isMenuOpen ? (
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    ) : (
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                                    )}
+                                </svg>
+                            </button>
                         </div>
                     </div>
+
+                    {/* Mobile Navigation Dropdown */}
+                    {isMenuOpen && (
+                        <nav className="md:hidden py-4 border-t border-gray-100 animate-fade-in">
+                            <ul className="flex flex-col space-y-4">
+                                <li>
+                                    <Link
+                                        href="/products"
+                                        className="block text-base font-medium text-gray-700 hover:text-indigo-600 transition"
+                                        onClick={() => setIsMenuOpen(false)}
+                                    >
+                                        ALL PRODUCTS
+                                    </Link>
+                                </li>
+                                <li>
+                                    <Link
+                                        href="/about"
+                                        className="block text-base font-medium text-gray-700 hover:text-indigo-600 transition"
+                                        onClick={() => setIsMenuOpen(false)}
+                                    >
+                                        ABOUT
+                                    </Link>
+                                </li>
+                                <li>
+                                    <Link
+                                        href="/terms-of-sale"
+                                        className="block text-base font-medium text-gray-700 hover:text-indigo-600 transition"
+                                        onClick={() => setIsMenuOpen(false)}
+                                    >
+                                        TERMS
+                                    </Link>
+                                </li>
+                            </ul>
+                        </nav>
+                    )}
                 </div>
             </header>
 

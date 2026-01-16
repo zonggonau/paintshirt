@@ -9,9 +9,10 @@ import ProductFilter from "./ProductFilter";
 
 interface ProductGridProps {
     products: PrintfulProduct[];
+    hideFilters?: boolean;
 }
 
-const ProductGrid: React.FC<ProductGridProps> = ({ products }) => {
+const ProductGrid: React.FC<ProductGridProps> = ({ products, hideFilters = false }) => {
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState("");
     const [sortOption, setSortOption] = useState("");
@@ -89,82 +90,84 @@ const ProductGrid: React.FC<ProductGridProps> = ({ products }) => {
     return (
         <div>
             {/* Search Bar with Filter Toggle */}
-            <div className="mb-6">
-                <div className="flex items-center gap-3">
-                    {/* Search Bar */}
-                    <div className="flex-1">
-                        <SearchBar
-                            value={searchQuery}
-                            onChange={setSearchQuery}
-                            placeholder="Search products..."
-                        />
+            {!hideFilters && (
+                <div className="mb-6">
+                    <div className="flex items-center gap-3">
+                        {/* Search Bar */}
+                        <div className="flex-1">
+                            <SearchBar
+                                value={searchQuery}
+                                onChange={setSearchQuery}
+                                placeholder="Search products..."
+                            />
+                        </div>
+
+                        {/* Search Icon Button */}
+                        <button
+                            className="flex-shrink-0 p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition"
+                            aria-label="Search"
+                        >
+                            <svg
+                                className="w-6 h-6 text-gray-700"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                                />
+                            </svg>
+                        </button>
+
+                        {/* Filter Toggle Button */}
+                        <button
+                            onClick={() => setIsFilterOpen(!isFilterOpen)}
+                            className={`flex-shrink-0 flex items-center gap-2 px-6 py-4 border-2 rounded-xl font-semibold transition ${isFilterOpen || hasActiveFilters
+                                ? "border-indigo-600 bg-indigo-50 text-indigo-700"
+                                : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                                }`}
+                        >
+                            <svg
+                                className="w-6 h-6"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+                                />
+                            </svg>
+                            <span className="hidden sm:inline">Filter</span>
+                            {hasActiveFilters && (
+                                <span className="w-2 h-2 bg-indigo-600 rounded-full animate-pulse"></span>
+                            )}
+                        </button>
                     </div>
 
-                    {/* Search Icon Button */}
-                    <button
-                        className="flex-shrink-0 p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition"
-                        aria-label="Search"
-                    >
-                        <svg
-                            className="w-6 h-6 text-gray-700"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    {/* Collapsible Filter Section */}
+                    {isFilterOpen && (
+                        <div className="mt-4 animate-fade-in">
+                            <ProductFilter
+                                products={products}
+                                selectedCategory={selectedCategory}
+                                sortOption={sortOption}
+                                onCategoryChange={setSelectedCategory}
+                                onSortChange={setSortOption}
+                                onClearFilters={clearFilters}
                             />
-                        </svg>
-                    </button>
-
-                    {/* Filter Toggle Button */}
-                    <button
-                        onClick={() => setIsFilterOpen(!isFilterOpen)}
-                        className={`flex-shrink-0 flex items-center gap-2 px-6 py-4 border-2 rounded-xl font-semibold transition ${isFilterOpen || hasActiveFilters
-                            ? "border-indigo-600 bg-indigo-50 text-indigo-700"
-                            : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                            }`}
-                    >
-                        <svg
-                            className="w-6 h-6"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-                            />
-                        </svg>
-                        <span className="hidden sm:inline">Filter</span>
-                        {hasActiveFilters && (
-                            <span className="w-2 h-2 bg-indigo-600 rounded-full animate-pulse"></span>
-                        )}
-                    </button>
+                        </div>
+                    )}
                 </div>
-
-                {/* Collapsible Filter Section */}
-                {isFilterOpen && (
-                    <div className="mt-4 animate-fade-in">
-                        <ProductFilter
-                            products={products}
-                            selectedCategory={selectedCategory}
-                            sortOption={sortOption}
-                            onCategoryChange={setSelectedCategory}
-                            onSortChange={setSortOption}
-                            onClearFilters={clearFilters}
-                        />
-                    </div>
-                )}
-            </div>
+            )}
 
             {/* Results Count */}
-            {hasActiveFilters && (
+            {!hideFilters && hasActiveFilters && (
                 <div className="mb-6 flex items-center justify-between">
                     <p className="text-gray-600">
                         Showing <span className="font-semibold text-indigo-600">{filteredProducts.length}</span> of{" "}
