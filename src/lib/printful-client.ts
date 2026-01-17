@@ -40,7 +40,7 @@ class PrintfulClient {
             return await response.json();
         } catch (error) {
             // Ensure error isn't empty object
-            if (typeof error === 'object' && error !== null && Object.keys(error as object).length === 0) {
+            if (typeof error === 'object' && error !== null && Object.keys(error as object).length === 0 && !(error instanceof Error)) {
                 throw new Error(`Printful fetch failed with empty error object. URL: ${url}`);
             }
             throw error;

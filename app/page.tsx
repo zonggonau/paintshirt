@@ -25,7 +25,7 @@ async function getProducts(): Promise<{ products: PrintfulProduct[]; error?: str
 
     // Fetch product IDs with retry logic
     const productIdsResponse = await fetchWithRetry<any>(
-      () => printful.get("sync/products")
+      () => printful.get("sync/products?limit=15")
     );
     const productIds = productIdsResponse.result;
 
