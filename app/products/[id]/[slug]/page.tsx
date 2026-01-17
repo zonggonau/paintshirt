@@ -239,6 +239,8 @@ export default async function ProductDetailPage({
         },
     };
 
+
+
     return (
         <>
             {/* JSON-LD Structured Data */}

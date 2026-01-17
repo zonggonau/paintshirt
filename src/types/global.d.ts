@@ -7,8 +7,7 @@ declare global {
     interface Window {
         Snipcart?: {
             events: {
-                on: (eventName: string, callback: (data: any) => void) => void;
-                off: (eventName: string, callback: (data: any) => void) => void;
+                on: (eventName: string, callback: (data: any) => void) => () => void;
             };
             api: {
                 cart: {

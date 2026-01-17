@@ -3,9 +3,8 @@ import { printful, fetchWithRetry } from "../src/lib/printful-client";
 import { formatVariantName } from "../src/lib/format-variant-name";
 import { PrintfulProduct, PrintfulCategory } from "../src/types";
 import { productCache } from "../src/lib/product-cache";
-import ProductGrid from "../src/components/ProductGrid";
-import CollectionSection from "../src/components/CollectionSection";
 import BrandsSection from "../src/components/BrandsSection";
+import { CollectionTwoGrid, CollectionThreeGrid, CollectionCarousel, CollectionSixGrid } from "../src/components/CollectionTemplates";
 import Link from "next/link";
 
 export const revalidate = 600; // 10 minutes cache
@@ -96,14 +95,14 @@ async function getCollectionsWithProducts(): Promise<{
         try {
           // Fetch products for this category
           const productsResponse = await fetchWithRetry<any>(
-            () => printful.get(`sync/products?limit=3&category_id=${collection.id}`)
+            () => printful.get(`sync/products?limit=6&category_id=${collection.id}`)
           );
 
           const productIds = productsResponse.result || [];
 
           // Fetch product details
           const productDetails = await Promise.all(
-            productIds.slice(0, 3).map(async ({ id }: any) =>
+            productIds.slice(0, 6).map(async ({ id }: any) =>
               await fetchWithRetry<any>(() => printful.get(`sync/products/${id}`))
             )
           );
@@ -256,52 +255,17 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Products Section */}
-      <section id="products" className="py-12 md:py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Section Header */}
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Featured Products
-            </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Browse our curated collection of premium apparel and accessories
-            </p>
-          </div>
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-8 max-w-2xl mx-auto">
-              <p className="text-red-600 text-center">{error}</p>
-            </div>
-          )}
-
-          <ProductGrid products={products.slice(0, 12)} hideFilters={true} />
-
-          <div className="mt-12 text-center">
-            <Link
-              href="/products"
-              className="inline-flex items-center px-8 py-3 bg-white border-2 border-indigo-600 text-indigo-600 font-semibold rounded-full hover:bg-indigo-50 transition transform hover:scale-105 shadow-md"
-            >
-              View All Products
-              <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-              </svg>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Collections Section */}
+      {/* Collections Section with Varied Templates */}
       {collections.length > 0 && (
         <section className="py-12 md:py-20 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             {/* Section Header */}
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-                Shop by Collection
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
+                Curated Collections
               </h2>
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                Explore curated collections designed for every style and occasion
+                Explore our hand-picked selections designed for your unique style.
               </p>
             </div>
 
@@ -312,15 +276,30 @@ export default async function Home() {
               </div>
             )}
 
-            {/* Render Each Collection */}
-            {collections.map((collection) => (
-              <CollectionSection
-                key={collection.category.id}
-                title={collection.category.title}
-                products={collection.products}
-                categorySlug={collection.category.title}
-              />
-            ))}
+            {/* Render Each Collection with Rotated Templates */}
+            {collections.map((collection, index) => {
+              // Rotation Pattern: TwoGrid -> SixGrid -> Carousel -> ThreeGrid
+              const patternIndex = index % 4;
+              const props = {
+                title: collection.category.title,
+                products: collection.products,
+                categorySlug: collection.category.title,
+              };
+              const key = collection.category.id;
+
+              switch (patternIndex) {
+                case 0:
+                  return <CollectionTwoGrid key={key} {...props} />;
+                case 1:
+                  return <CollectionSixGrid key={key} {...props} />;
+                case 2:
+                  return <CollectionCarousel key={key} {...props} />;
+                case 3:
+                  return <CollectionThreeGrid key={key} {...props} />;
+                default:
+                  return <CollectionThreeGrid key={key} {...props} />;
+              }
+            })}
           </div>
         </section>
       )}

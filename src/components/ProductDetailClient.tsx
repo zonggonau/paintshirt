@@ -66,16 +66,24 @@ export default function ProductDetailClient({ product }: { product: PrintfulProd
             }
         };
 
-        // Listen to Snipcart cart events
-        document.addEventListener('snipcart.ready', () => {
+        let unsubscribe: (() => void) | undefined;
+
+        const subscribe = () => {
             if (window.Snipcart) {
-                window.Snipcart.events.on('item.added', handleAddToCart);
+                unsubscribe = window.Snipcart.events.on('item.added', handleAddToCart);
             }
-        });
+        };
+
+        if (window.Snipcart) {
+            subscribe();
+        } else {
+            document.addEventListener('snipcart.ready', subscribe);
+        }
 
         return () => {
-            if (window.Snipcart) {
-                window.Snipcart.events.off('item.added', handleAddToCart);
+            document.removeEventListener('snipcart.ready', subscribe);
+            if (unsubscribe) {
+                unsubscribe();
             }
         };
     }, [activeVariantExternalId, activeVariant, name]);

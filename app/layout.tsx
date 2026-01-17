@@ -55,7 +55,9 @@ export default async function RootLayout({
       </head>
       <body suppressHydrationWarning>
         <WishlistProvider>
-          <Layout categories={categories}>{children}</Layout>
+          <Layout categories={categories}>
+            <main className="min-h-screen">{children}</main>
+          </Layout>
         </WishlistProvider>
 
         {/* Google Analytics 4 - Only in production */}

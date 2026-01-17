@@ -478,9 +478,7 @@ const Layout = ({ children, categories = [] }: { children: React.ReactNode, cate
             </header>
 
             {/* Main Content */}
-            <main className="min-h-screen">
-                {children}
-            </main>
+            {children}
 
             {/* Modern Footer */}
             <footer className="bg-gradient-to-b from-gray-50 to-white border-t border-gray-200">
