@@ -17,6 +17,16 @@ declare global {
                     };
                 };
             };
+            store: {
+                subscribe: (callback: () => void) => () => void;
+                getState: () => {
+                    cart: {
+                        items: {
+                            count: number;
+                        };
+                    };
+                };
+            };
         };
         gtag?: (...args: any[]) => void;
         dataLayer?: any[];

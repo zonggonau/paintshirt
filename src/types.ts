@@ -1,7 +1,4 @@
 declare global {
-  interface Window {
-    Snipcart: any;
-  }
   namespace JSX {
     interface IntrinsicElements {
       "address-fields": any;
@@ -10,6 +7,7 @@ declare global {
     }
   }
 }
+
 
 export type SnipcartWebhookEvent =
   | "order.completed"

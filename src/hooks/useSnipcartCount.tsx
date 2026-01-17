@@ -17,10 +17,12 @@ const useSnipcartCount = () => {
     });
 
     useEffect(() => {
-        if (!hasSnipcart()) return;
+        if (!hasSnipcart() || !window.Snipcart) return;
 
         const unsubscribe = window.Snipcart.store.subscribe(() => {
-            setCart(window.Snipcart.store.getState().cart);
+            if (window.Snipcart) {
+                setCart(window.Snipcart.store.getState().cart);
+            }
         });
 
         return unsubscribe;
