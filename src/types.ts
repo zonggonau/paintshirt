@@ -106,6 +106,7 @@ export interface PrintfulProduct {
     name: string;
     size?: string;
     color?: string;
+    parent_id?: number;
     retail_price: number;
     currency: string;
     files: Array<{
@@ -119,3 +120,12 @@ export type PrintfulShippingItem = {
   external_variant_id: string;
   quantity: number;
 };
+
+export interface PrintfulCategory {
+  id: number;
+  parent_id: number;
+  image_url: string;
+  catalog_position: number;
+  size: string;
+  title: string;
+}

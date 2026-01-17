@@ -9,11 +9,34 @@ export const metadata: Metadata = {
   description: "High quality print-on-demand products powered by Printful",
 };
 
-export default function RootLayout({
+import { printful, fetchWithRetry } from "../src/lib/printful-client";
+import { PrintfulCategory } from "../src/types";
+
+// Cache layout for 10 minutes (categories don't change often)
+export const revalidate = 600;
+
+// Helper to fetch categories
+async function getCategories(): Promise<PrintfulCategory[]> {
+  try {
+    const response = await fetchWithRetry<any>(
+      () => printful.get("categories")
+    );
+    return response.result.categories;
+  } catch (error) {
+    console.error("Error fetching categories for layout:", error);
+    return [];
+  }
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Only fetch categories - no need for products in layout
+  // This reduces API calls and prevents rate limiting
+  const categories = await getCategories();
+
   return (
     <html lang="en">
       <head>
@@ -32,8 +55,32 @@ export default function RootLayout({
       </head>
       <body suppressHydrationWarning>
         <WishlistProvider>
-          <Layout>{children}</Layout>
+          <Layout categories={categories}>{children}</Layout>
         </WishlistProvider>
+
+        {/* Google Analytics 4 - Only in production */}
+        {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && (
+          <>
+            <Script
+              strategy="afterInteractive"
+              src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID}`}
+            />
+            <Script
+              id="google-analytics"
+              strategy="afterInteractive"
+              dangerouslySetInnerHTML={{
+                __html: `
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){dataLayer.push(arguments);}
+                  gtag('js', new Date());
+                  gtag('config', '${process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID}', {
+                    page_path: window.location.pathname,
+                  });
+                `,
+              }}
+            />
+          </>
+        )}
 
         <div
           hidden

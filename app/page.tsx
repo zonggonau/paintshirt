@@ -1,12 +1,14 @@
 import shuffle from "lodash.shuffle";
 import { printful, fetchWithRetry } from "../src/lib/printful-client";
 import { formatVariantName } from "../src/lib/format-variant-name";
-import { PrintfulProduct } from "../src/types";
+import { PrintfulProduct, PrintfulCategory } from "../src/types";
 import { productCache } from "../src/lib/product-cache";
 import ProductGrid from "../src/components/ProductGrid";
+import CollectionSection from "../src/components/CollectionSection";
+import BrandsSection from "../src/components/BrandsSection";
 import Link from "next/link";
 
-export const revalidate = 60; // Revalidate every 60 seconds
+export const revalidate = 600; // 10 minutes cache
 
 
 async function getProducts(): Promise<{ products: PrintfulProduct[]; error?: string }> {
@@ -25,7 +27,7 @@ async function getProducts(): Promise<{ products: PrintfulProduct[]; error?: str
 
     // Fetch product IDs with retry logic
     const productIdsResponse = await fetchWithRetry<any>(
-      () => printful.get("sync/products?limit=15")
+      () => printful.get("sync/products?limit=12")
     );
     const productIds = productIdsResponse.result;
 
@@ -65,8 +67,111 @@ async function getProducts(): Promise<{ products: PrintfulProduct[]; error?: str
   }
 }
 
+// Fetch collections with products
+async function getCollectionsWithProducts(): Promise<{
+  collections: Array<{ category: PrintfulCategory; products: PrintfulProduct[] }>;
+  error?: string;
+}> {
+  try {
+    // Fetch categories
+    const categoriesResponse = await fetchWithRetry<any>(
+      () => printful.get("categories")
+    );
+    const categories: PrintfulCategory[] = categoriesResponse.result.categories;
+
+    // Find Collections parent (ID: 116)
+    const collectionsParent = categories.find(cat => cat.id === 116);
+    if (!collectionsParent) {
+      return { collections: [] };
+    }
+
+    // Get all sub-collections
+    const subCollections = categories
+      .filter(cat => cat.parent_id === 116)
+      .sort((a, b) => (a.catalog_position ?? a.id) - (b.catalog_position ?? b.id));
+
+    // Fetch products for each collection
+    const collectionsWithProducts = await Promise.all(
+      subCollections.map(async (collection) => {
+        try {
+          // Fetch products for this category
+          const productsResponse = await fetchWithRetry<any>(
+            () => printful.get(`sync/products?limit=3&category_id=${collection.id}`)
+          );
+
+          const productIds = productsResponse.result || [];
+
+          // Fetch product details
+          const productDetails = await Promise.all(
+            productIds.slice(0, 3).map(async ({ id }: any) =>
+              await fetchWithRetry<any>(() => printful.get(`sync/products/${id}`))
+            )
+          );
+
+          const products: PrintfulProduct[] = productDetails.map((response: any) => {
+            const { sync_product, sync_variants } = response.result;
+            return {
+              ...sync_product,
+              variants: sync_variants.map(({ name, ...variant }: any) => ({
+                name: formatVariantName(name),
+                ...variant,
+              })),
+            };
+          });
+
+          return {
+            category: collection,
+            products,
+          };
+        } catch (error) {
+          console.error(`Error fetching products for collection ${collection.title}:`, error);
+          return {
+            category: collection,
+            products: [],
+          };
+        }
+      })
+    );
+
+    // Filter out collections with no products
+    return {
+      collections: collectionsWithProducts.filter(c => c.products.length > 0),
+    };
+  } catch (error) {
+    console.error("Error fetching collections:", error);
+    return {
+      collections: [],
+      error: "Failed to load collections.",
+    };
+  }
+}
+
+// Fetch all brands (sub-categories of Brands parent category ID: 159)
+async function getBrands(): Promise<PrintfulCategory[]> {
+  try {
+    const categoriesResponse = await fetchWithRetry<any>(
+      () => printful.get("categories")
+    );
+    const categories: PrintfulCategory[] = categoriesResponse.result.categories;
+
+    // Get brands parent category (ID: 159) and its children
+    const brands = categories
+      .filter(cat => cat.parent_id === 159)
+      .sort((a, b) => (a.catalog_position ?? a.id) - (b.catalog_position ?? b.id));
+
+    return brands;
+  } catch (error) {
+    console.error("Error fetching brands:", error);
+    return [];
+  }
+}
+
 export default async function Home() {
-  const { products, error } = await getProducts();
+  const [{ products, error }, { collections, error: collectionsError }, brands] = await Promise.all([
+    getProducts(),
+    getCollectionsWithProducts(),
+    getBrands(),
+  ]);
 
   return (
     <>
@@ -185,6 +290,43 @@ export default async function Home() {
           </div>
         </div>
       </section>
+
+      {/* Collections Section */}
+      {collections.length > 0 && (
+        <section className="py-12 md:py-20 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            {/* Section Header */}
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                Shop by Collection
+              </h2>
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                Explore curated collections designed for every style and occasion
+              </p>
+            </div>
+
+            {/* Collections Error */}
+            {collectionsError && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-8 max-w-2xl mx-auto">
+                <p className="text-yellow-700 text-center">{collectionsError}</p>
+              </div>
+            )}
+
+            {/* Render Each Collection */}
+            {collections.map((collection) => (
+              <CollectionSection
+                key={collection.category.id}
+                title={collection.category.title}
+                products={collection.products}
+                categorySlug={collection.category.title}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* All Brands Section */}
+      <BrandsSection brands={brands} />
 
       {/* Features Section */}
       <section className="py-12 md:py-20 bg-white">

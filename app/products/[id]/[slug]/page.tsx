@@ -6,8 +6,9 @@ import { formatVariantName } from "../../../../src/lib/format-variant-name";
 import ProductDetailClient from "../../../../src/components/ProductDetailClient";
 import RelatedProducts from "../../../../src/components/RelatedProducts";
 import { productCache } from "../../../../src/lib/product-cache";
+import { PrintfulCategory } from "../../../../src/types";
 
-export const revalidate = 60; // Revalidate every 60 seconds
+export const revalidate = 600; // 10 minutes cache
 
 
 async function getProduct(id: string) {
@@ -67,6 +68,26 @@ async function getAllProducts() {
         return products;
     } catch (error) {
         console.error("Error fetching all products:", error);
+        return [];
+    }
+}
+
+// Fetch all brands (sub-categories of Brands parent category ID: 159)
+async function getBrands(): Promise<PrintfulCategory[]> {
+    try {
+        const response = await fetchWithRetry<any>(
+            () => printful.get("categories")
+        );
+        const categories: PrintfulCategory[] = response.result.categories;
+
+        // Get brands parent category (ID: 159) and its children
+        const brands = categories
+            .filter(cat => cat.parent_id === 159)
+            .sort((a, b) => (a.catalog_position ?? a.id) - (b.catalog_position ?? b.id));
+
+        return brands;
+    } catch (error) {
+        console.error("Error fetching brands:", error);
         return [];
     }
 }
@@ -175,6 +196,7 @@ export default async function ProductDetailPage({
         notFound();
     }
 
+
     const [firstVariant] = product.variants;
     const previewImage = firstVariant.files.find(
         (file: any) => file.type === "preview"
@@ -199,7 +221,7 @@ export default async function ProductDetailPage({
         },
         offers: {
             "@type": "AggregateOffer",
-            url: `https://paintshirt.com/products/${id}/${slug}`,
+            url: `https://printfultshirt.com/products/${id}/${slug}`,
             priceCurrency: firstVariant.currency,
             lowPrice: Math.min(...product.variants.map((v: any) => v.retail_price)),
             highPrice: Math.max(...product.variants.map((v: any) => v.retail_price)),
@@ -207,7 +229,7 @@ export default async function ProductDetailPage({
             availability: "https://schema.org/InStock",
             seller: {
                 "@type": "Organization",
-                name: "PainTshirt",
+                name: "PrintfulTshirt",
             },
         },
         aggregateRating: {

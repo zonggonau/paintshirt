@@ -11,6 +11,7 @@ interface ProductFilterProps {
     onCategoryChange: (category: string) => void;
     onSortChange: (sort: string) => void;
     onClearFilters: () => void;
+    categoryMap?: Record<number, string>;
 }
 
 const ProductFilter = ({
@@ -20,12 +21,13 @@ const ProductFilter = ({
     onCategoryChange,
     onSortChange,
     onClearFilters,
+    categoryMap
 }: ProductFilterProps) => {
     // Extract product categories/types
     const availableCategories = useMemo(() => {
         const categories = new Set<string>();
         products.forEach((product) => {
-            categories.add(getCategoryFromProduct(product));
+            categories.add(getCategoryFromProduct(product, categoryMap));
         });
 
         // Remove "Other" if it exists and sort, then append Other at end if needed
@@ -38,7 +40,7 @@ const ProductFilter = ({
         }
 
         return sorted;
-    }, [products]);
+    }, [products, categoryMap]);
 
     const hasActiveFilters = selectedCategory || sortOption;
 

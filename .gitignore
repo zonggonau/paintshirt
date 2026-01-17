@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# temporary & debug files
+product_output.json
+temp_categories.json
+analyze_product.js
+fetch_categories.js

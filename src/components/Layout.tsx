@@ -1,27 +1,111 @@
 "use client";
 
-import { useState } from "react";
 
+import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import useWishlistState from "../hooks/useWishlistState";
 import useSnipcartCount from "../hooks/useSnipcartCount";
+import { PrintfulCategory } from "../types";
 
-const Layout = ({ children }: { children: React.ReactNode }) => {
+const Layout = ({ children, categories = [] }: { children: React.ReactNode, categories?: PrintfulCategory[] }) => {
+    const router = useRouter();
     const wishlistState = useWishlistState();
     const { cart } = useSnipcartCount();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isMegaMenuOpen, setIsMegaMenuOpen] = useState(false);
+    const [activeRootId, setActiveRootId] = useState<number | null>(null);
 
     const hasItems = wishlistState?.hasItems || false;
     const cartHasItems = cart.items.count !== 0;
 
+    // Process categories into hierarchy
+    const categoryTree = useMemo(() => {
+        const roots: PrintfulCategory[] = [];
+        const childrenMap: Record<number, PrintfulCategory[]> = {};
+
+        // Sort categories by catalog_position if available, otherwise by ID
+        const sortedCategories = [...categories].sort((a, b) => {
+            const posA = a.catalog_position ?? a.id;
+            const posB = b.catalog_position ?? b.id;
+            return posA - posB;
+        });
+
+        sortedCategories.forEach(cat => {
+            if (cat.parent_id === 0) {
+                roots.push(cat);
+            } else {
+                if (!childrenMap[cat.parent_id]) {
+                    childrenMap[cat.parent_id] = [];
+                }
+                childrenMap[cat.parent_id].push(cat);
+            }
+        });
+
+        return { roots, childrenMap };
+    }, [categories]);
+
+    // Set default active root when menu opens or roots load
+    useEffect(() => {
+        if (isMegaMenuOpen && categoryTree.roots.length > 0 && activeRootId === null) {
+            setActiveRootId(categoryTree.roots[0].id);
+        }
+    }, [isMegaMenuOpen, categoryTree.roots, activeRootId]);
+
+    // Auto-detect active category from URL
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const categoryParam = params.get('category');
+
+            if (categoryParam && categoryTree.roots.length > 0) {
+                // Find root category that matches
+                const matchingRoot = categoryTree.roots.find(root =>
+                    root.title.toLowerCase() === categoryParam.toLowerCase()
+                );
+
+                if (matchingRoot) {
+                    setActiveRootId(matchingRoot.id);
+                    return;
+                }
+
+                // If not found in roots, search in sub-categories
+                for (const root of categoryTree.roots) {
+                    const subCategories = categoryTree.childrenMap[root.id] || [];
+                    const matchingSubCat = subCategories.find(sub =>
+                        sub.title.toLowerCase() === categoryParam.toLowerCase()
+                    );
+
+                    if (matchingSubCat) {
+                        setActiveRootId(root.id);
+                        return;
+                    }
+
+                    // Search in level 3
+                    for (const subCat of subCategories) {
+                        const level3Categories = categoryTree.childrenMap[subCat.id] || [];
+                        const matchingLevel3 = level3Categories.find(l3 =>
+                            l3.title.toLowerCase() === categoryParam.toLowerCase()
+                        );
+
+                        if (matchingLevel3) {
+                            setActiveRootId(root.id);
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+    }, [categoryTree, isMegaMenuOpen]);
+
     return (
         <>
             {/* Modern Sticky Header with Glassmorphism */}
-            <header className="sticky top-0 z-10 glass-dark border-b border-white/10">
+            <header className="sticky top-0 z-40 glass-dark border-b border-white/10" onMouseLeave={() => setIsMegaMenuOpen(false)}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16 md:h-20">
                         {/* Logo with Gradient */}
-                        <Link href="/" className="flex items-center space-x-2 md:space-x-3 group">
+                        <Link href="/" className="flex items-center space-x-2 md:space-x-3 group z-50">
                             <div className="relative">
                                 <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full blur opacity-75 group-hover:opacity-100 transition"></div>
                                 <div className="relative bg-white rounded-full p-1.5 md:p-2">
@@ -46,14 +130,24 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
                         {/* Navigation - Hidden on mobile */}
                         <nav className="hidden md:flex items-center space-x-8">
-                            <Link href="/products" className="text-sm font-medium text-gray-700 hover:text-indigo-600 transition">
+                            {/* Mega Menu Trigger */}
+                            <div
+                                className="group h-full flex items-center"
+                                onMouseEnter={() => setIsMegaMenuOpen(true)}
+                            >
+                                <button className={`text-sm font-medium transition flex items-center gap-1 ${isMegaMenuOpen ? 'text-indigo-600' : 'text-gray-700 hover:text-indigo-600'}`}>
+                                    CATEGORIES
+                                    <svg className={`w-4 h-4 transition-transform duration-200 ${isMegaMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <Link href="/products?page=1" className="text-sm font-medium text-gray-700 hover:text-indigo-600 transition">
                                 ALL PRODUCTS
                             </Link>
                             <Link href="/about" className="text-sm font-medium text-gray-700 hover:text-indigo-600 transition">
                                 ABOUT
-                            </Link>
-                            <Link href="/terms-of-sale" className="text-sm font-medium text-gray-700 hover:text-indigo-600 transition">
-                                TERMS
                             </Link>
                         </nav>
 
@@ -131,12 +225,113 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
                     {/* Mobile Navigation Dropdown */}
                     {isMenuOpen && (
-                        <nav className="md:hidden py-4 border-t border-gray-100 animate-fade-in">
-                            <ul className="flex flex-col space-y-4">
+                        <nav className="md:hidden py-4 border-t border-gray-100 animate-fade-in max-h-[calc(100vh-80px)] overflow-y-auto">
+                            <ul className="flex flex-col space-y-2">
+                                {/* Categories Accordion */}
+                                <li className="border-b border-gray-100 pb-2">
+                                    <button
+                                        onClick={() => setIsMegaMenuOpen(!isMegaMenuOpen)}
+                                        className="w-full flex items-center justify-between px-4 py-3 text-base font-semibold text-gray-900 hover:bg-gray-50 rounded-lg transition"
+                                    >
+                                        <span>CATEGORIES</span>
+                                        <svg
+                                            className={`w-5 h-5 transition-transform duration-200 ${isMegaMenuOpen ? 'rotate-180' : ''}`}
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+
+                                    {/* Category List */}
+                                    {isMegaMenuOpen && (
+                                        <div className="mt-2 space-y-1 animate-fade-in">
+                                            {categoryTree.roots.map((root) => {
+                                                const hasChildren = categoryTree.childrenMap[root.id]?.length > 0;
+                                                const isExpanded = activeRootId === root.id;
+
+                                                return (
+                                                    <div key={root.id} className="ml-2">
+                                                        <button
+                                                            onClick={() => {
+                                                                if (hasChildren) {
+                                                                    setActiveRootId(isExpanded ? null : root.id);
+                                                                } else {
+                                                                    router.push(`/products?category=${encodeURIComponent(root.title)}`);
+                                                                    setIsMenuOpen(false);
+                                                                    setIsMegaMenuOpen(false);
+                                                                }
+                                                            }}
+                                                            className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-all ${isExpanded
+                                                                    ? 'bg-indigo-50 text-indigo-700 font-semibold'
+                                                                    : 'text-gray-700 hover:bg-gray-50'
+                                                                }`}
+                                                        >
+                                                            <span className="text-sm font-medium">{root.title}</span>
+                                                            {hasChildren && (
+                                                                <svg
+                                                                    className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                                                                    fill="none"
+                                                                    stroke="currentColor"
+                                                                    viewBox="0 0 24 24"
+                                                                >
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                                </svg>
+                                                            )}
+                                                        </button>
+
+                                                        {/* Sub-categories */}
+                                                        {isExpanded && hasChildren && (
+                                                            <div className="ml-4 mt-1 space-y-1 animate-fade-in border-l-2 border-indigo-200 pl-2">
+                                                                {categoryTree.childrenMap[root.id].map((subCat) => (
+                                                                    <div key={subCat.id}>
+                                                                        <Link
+                                                                            href={`/products?category=${encodeURIComponent(subCat.title)}`}
+                                                                            className="block px-3 py-2 text-sm text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded transition"
+                                                                            onClick={() => {
+                                                                                setIsMenuOpen(false);
+                                                                                setIsMegaMenuOpen(false);
+                                                                            }}
+                                                                        >
+                                                                            {subCat.title}
+                                                                        </Link>
+
+                                                                        {/* Level 3 Sub-categories */}
+                                                                        {categoryTree.childrenMap[subCat.id]?.length > 0 && (
+                                                                            <div className="ml-3 mt-1 space-y-1 border-l border-gray-200 pl-2">
+                                                                                {categoryTree.childrenMap[subCat.id].map((level3) => (
+                                                                                    <Link
+                                                                                        key={level3.id}
+                                                                                        href={`/products?category=${encodeURIComponent(level3.title)}`}
+                                                                                        className="block px-2 py-1.5 text-xs text-gray-500 hover:text-indigo-600 rounded transition flex items-center"
+                                                                                        onClick={() => {
+                                                                                            setIsMenuOpen(false);
+                                                                                            setIsMegaMenuOpen(false);
+                                                                                        }}
+                                                                                    >
+                                                                                        <span className="w-1 h-1 rounded-full bg-gray-300 mr-2"></span>
+                                                                                        {level3.title}
+                                                                                    </Link>
+                                                                                ))}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </li>
+
+                                {/* Other Menu Items */}
                                 <li>
                                     <Link
-                                        href="/products"
-                                        className="block text-base font-medium text-gray-700 hover:text-indigo-600 transition"
+                                        href="/products?page=1"
+                                        className="block px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-lg transition"
                                         onClick={() => setIsMenuOpen(false)}
                                     >
                                         ALL PRODUCTS
@@ -145,7 +340,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                                 <li>
                                     <Link
                                         href="/about"
-                                        className="block text-base font-medium text-gray-700 hover:text-indigo-600 transition"
+                                        className="block px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-lg transition"
                                         onClick={() => setIsMenuOpen(false)}
                                     >
                                         ABOUT
@@ -154,16 +349,130 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                                 <li>
                                     <Link
                                         href="/terms-of-sale"
-                                        className="block text-base font-medium text-gray-700 hover:text-indigo-600 transition"
+                                        className="block px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-indigo-600 rounded-lg transition"
                                         onClick={() => setIsMenuOpen(false)}
                                     >
-                                        TERMS
+                                        TERMS OF SALE
                                     </Link>
                                 </li>
                             </ul>
                         </nav>
                     )}
                 </div>
+
+                {/* Mega Menu Dropdown (Flowbite Style) */}
+                {isMegaMenuOpen && (
+                    <div
+                        className="absolute top-full left-1/2 -translate-x-1/2 max-w-screen-xl w-full bg-white border border-gray-200 rounded-b-lg shadow-lg z-30 animate-fade-in"
+                        onMouseEnter={() => setIsMegaMenuOpen(true)}
+                        onMouseLeave={() => setIsMegaMenuOpen(false)}
+                    >
+                        <div className="flex divide-x divide-gray-200">
+                            {/* Column 1: Root Categories (Left) */}
+                            <div className="w-80 py-6 px-4">
+                                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 px-3">Main Categories</h3>
+                                <ul className="space-y-1">
+                                    {categoryTree.roots.map((root) => (
+                                        <li key={root.id}>
+                                            <button
+                                                className={`w-full text-left px-3 py-2.5 rounded-lg transition-all flex items-center justify-between group ${activeRootId === root.id
+                                                    ? "bg-indigo-50 text-indigo-700 font-semibold"
+                                                    : "text-gray-700 hover:bg-gray-50 font-medium"
+                                                    }`}
+                                                onMouseEnter={() => setActiveRootId(root.id)}
+                                                onClick={() => {
+                                                    router.push(`/products?category=${encodeURIComponent(root.title)}`);
+                                                    setIsMegaMenuOpen(false);
+                                                }}
+                                            >
+                                                <span>{root.title}</span>
+                                                <svg
+                                                    className={`w-4 h-4 transition-transform ${activeRootId === root.id ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-600'}`}
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                </svg>
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+
+                            {/* Column 2: Sub-Categories (Middle/Right) with Scroll */}
+                            {activeRootId && categoryTree.childrenMap[activeRootId] && (
+                                <div className="flex-1 bg-gray-50/50 flex flex-col max-h-[600px]">
+                                    <div className="py-6 px-6 border-b border-gray-200">
+                                        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                            {categoryTree.roots.find(r => r.id === activeRootId)?.title} - Categories
+                                        </h3>
+                                    </div>
+                                    <div className="flex-1 overflow-y-auto custom-scrollbar py-6 px-6">
+                                        <div className="grid grid-cols-6 gap-x-8 gap-y-6">
+                                            {categoryTree.childrenMap[activeRootId].map((subCat) => (
+                                                <div key={subCat.id} className="space-y-2">
+                                                    <Link
+                                                        href={`/products?category=${encodeURIComponent(subCat.title)}`}
+                                                        className="block font-semibold text-gray-900 hover:text-indigo-600 transition-colors"
+                                                        onClick={() => setIsMegaMenuOpen(false)}
+                                                    >
+                                                        {subCat.title}
+                                                    </Link>
+
+                                                    {/* Level 3: Sub-Sub-Categories */}
+                                                    {categoryTree.childrenMap[subCat.id] && categoryTree.childrenMap[subCat.id].length > 0 && (
+                                                        <ul className="space-y-1.5 ml-0">
+                                                            {categoryTree.childrenMap[subCat.id].map((level3) => (
+                                                                <li key={level3.id}>
+                                                                    <Link
+                                                                        href={`/products?category=${encodeURIComponent(level3.title)}`}
+                                                                        className="text-sm text-gray-600 hover:text-indigo-600 transition-colors flex items-center group"
+                                                                        onClick={() => setIsMegaMenuOpen(false)}
+                                                                    >
+                                                                        <span className="w-1 h-1 rounded-full bg-gray-300 mr-2 group-hover:bg-indigo-500"></span>
+                                                                        {level3.title}
+                                                                    </Link>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    )}
+
+                                                    {/* If no level 3, show "Shop all" link */}
+                                                    {(!categoryTree.childrenMap[subCat.id] || categoryTree.childrenMap[subCat.id].length === 0) && (
+                                                        <Link
+                                                            href={`/products?category=${encodeURIComponent(subCat.title)}`}
+                                                            className="text-sm text-gray-500 hover:text-indigo-600 transition-colors inline-flex items-center"
+                                                            onClick={() => setIsMegaMenuOpen(false)}
+                                                        >
+                                                            Shop all →
+                                                        </Link>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Fallback if no active category */}
+                            {activeRootId && !categoryTree.childrenMap[activeRootId] && (
+                                <div className="flex-1 py-6 px-6 bg-gray-50/50 min-h-[400px] flex items-center justify-center">
+                                    <div className="text-center">
+                                        <p className="text-gray-500 mb-4">No sub-categories available</p>
+                                        <Link
+                                            href={`/products?category=${encodeURIComponent(categoryTree.roots.find(r => r.id === activeRootId)?.title || '')}`}
+                                            className="inline-flex items-center px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                                            onClick={() => setIsMegaMenuOpen(false)}
+                                        >
+                                            View All Products
+                                        </Link>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </header>
 
             {/* Main Content */}
