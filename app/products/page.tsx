@@ -30,7 +30,7 @@ async function getProducts(): Promise<{ products: PrintfulProduct[]; error?: str
 
         // Fetch product IDs with retry logic
         const productIdsResponse = await fetchWithRetry<any>(
-            () => printful.get("sync/products")
+            () => printful.get("sync/products?limit=100")
         );
         const productIds = productIdsResponse.result;
 
@@ -56,6 +56,8 @@ async function getProducts(): Promise<{ products: PrintfulProduct[]; error?: str
 
         // Store in cache
         productCache.set(products);
+        console.log(products.length);
+
 
         return {
             products: shuffle(products),
@@ -69,6 +71,7 @@ async function getProducts(): Promise<{ products: PrintfulProduct[]; error?: str
         };
     }
 }
+
 
 export default async function ProductsPage() {
     const { products, error } = await getProducts();
