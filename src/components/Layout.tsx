@@ -46,13 +46,15 @@ const Layout = ({ children, categories = [] }: { children: React.ReactNode, cate
     }, [categories]);
 
     // Set default active root when menu opens or roots load
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         if (isMegaMenuOpen && categoryTree.roots.length > 0 && activeRootId === null) {
             setActiveRootId(categoryTree.roots[0].id);
         }
-    }, [isMegaMenuOpen, categoryTree.roots, activeRootId]);
+    }, [isMegaMenuOpen, categoryTree.roots]);
 
     // Auto-detect active category from URL
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const params = new URLSearchParams(window.location.search);
@@ -96,12 +98,12 @@ const Layout = ({ children, categories = [] }: { children: React.ReactNode, cate
                 }
             }
         }
-    }, [categoryTree, isMegaMenuOpen]);
+    }, [categoryTree]);
 
     return (
         <>
             {/* Modern Sticky Header with Glassmorphism */}
-            <header className="sticky top-0 z-40 glass-dark border-b border-white/10" onMouseLeave={() => setIsMegaMenuOpen(false)}>
+            <header className="sticky top-0 z-10 fixed glass-dark border-b border-white/10" onMouseLeave={() => setIsMegaMenuOpen(false)}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16 md:h-20">
                         {/* Logo with Gradient */}
@@ -264,8 +266,8 @@ const Layout = ({ children, categories = [] }: { children: React.ReactNode, cate
                                                                 }
                                                             }}
                                                             className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-all ${isExpanded
-                                                                    ? 'bg-indigo-50 text-indigo-700 font-semibold'
-                                                                    : 'text-gray-700 hover:bg-gray-50'
+                                                                ? 'bg-indigo-50 text-indigo-700 font-semibold'
+                                                                : 'text-gray-700 hover:bg-gray-50'
                                                                 }`}
                                                         >
                                                             <span className="text-sm font-medium">{root.title}</span>
@@ -363,7 +365,7 @@ const Layout = ({ children, categories = [] }: { children: React.ReactNode, cate
                 {/* Mega Menu Dropdown (Flowbite Style) */}
                 {isMegaMenuOpen && (
                     <div
-                        className="absolute top-full left-1/2 -translate-x-1/2 max-w-screen-xl w-full bg-white border border-gray-200 rounded-b-lg shadow-lg z-30 animate-fade-in"
+                        className="absolute top-full left-1/2 -translate-x-1/2 max-w-screen-xl w-full bg-white border border-gray-200 rounded-b-lg shadow-lg z-10 animate-fade-in"
                         onMouseEnter={() => setIsMegaMenuOpen(true)}
                         onMouseLeave={() => setIsMegaMenuOpen(false)}
                     >

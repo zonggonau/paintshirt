@@ -11,7 +11,7 @@
 Add this to your `.env.local` file:
 
 ```bash
-NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
+NEXT_PUBLIC_GA_MEASUREMENT_ID=G-83MF6YBJYJ
 ```
 
 ## 3. Integration Already Done! ✅

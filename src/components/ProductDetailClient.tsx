@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import useWishlistDispatch from "../hooks/useWishlistDispatch";
 import useWishlistState from "../hooks/useWishlistState";
 import { PrintfulProduct } from "../types";
+import { trackEvent } from "./GoogleAnalytics";
 
 export default function ProductDetailClient({ product }: { product: PrintfulProduct }) {
     const wishlistDispatch = useWishlistDispatch();
@@ -19,25 +20,7 @@ export default function ProductDetailClient({ product }: { product: PrintfulProd
         firstVariant.external_id
     );
 
-    const activeVariant = variants.find(
-        (v) => v.external_id === activeVariantExternalId
-    );
-
-    if (!activeVariant) return null;
-
-    const activeVariantFile = activeVariant.files.find(
-        ({ type }) => type === "preview"
-    );
-
-    const formattedPrice = new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: activeVariant.currency,
-    }).format(activeVariant.retail_price);
-
-    const addToWishlist = () => addItem?.(product);
-    const onWishlist = isSaved?.(id) || false;
-
-    // Extract unique sizes and colors
+    // Extract unique sizes and colors - must be before early return
     const uniqueSizes = useMemo(() => {
         const sizes = variants
             .map((v) => v.size)
@@ -54,8 +37,63 @@ export default function ProductDetailClient({ product }: { product: PrintfulProd
         return colors;
     }, [variants]);
 
-    const [selectedSize, setSelectedSize] = useState(activeVariant.size || "");
-    const [selectedColor, setSelectedColor] = useState(activeVariant.color || "");
+    const activeVariant = variants.find(
+        (v) => v.external_id === activeVariantExternalId
+    );
+
+    const [selectedSize, setSelectedSize] = useState(activeVariant?.size || "");
+    const [selectedColor, setSelectedColor] = useState(activeVariant?.color || "");
+
+    // Track Snipcart add to cart events with Google Analytics
+    useEffect(() => {
+        if (!activeVariant) return;
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const handleAddToCart = (event: any) => {
+            const item = event.detail?.item;
+            if (item && item.id === activeVariantExternalId) {
+                trackEvent('add_to_cart', {
+                    currency: activeVariant.currency,
+                    value: activeVariant.retail_price,
+                    items: [{
+                        item_id: activeVariantExternalId,
+                        item_name: name,
+                        item_variant: activeVariant.name,
+                        price: activeVariant.retail_price,
+                        quantity: 1
+                    }]
+                });
+            }
+        };
+
+        // Listen to Snipcart cart events
+        document.addEventListener('snipcart.ready', () => {
+            if (window.Snipcart) {
+                window.Snipcart.events.on('item.added', handleAddToCart);
+            }
+        });
+
+        return () => {
+            if (window.Snipcart) {
+                window.Snipcart.events.off('item.added', handleAddToCart);
+            }
+        };
+    }, [activeVariantExternalId, activeVariant, name]);
+
+    // Early return AFTER all hooks
+    if (!activeVariant) return null;
+
+    const activeVariantFile = activeVariant.files.find(
+        ({ type }) => type === "preview"
+    );
+
+    const formattedPrice = new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: activeVariant.currency,
+    }).format(activeVariant.retail_price);
+
+    const addToWishlist = () => addItem?.(product);
+    const onWishlist = isSaved?.(id) || false;
 
     const handleSizeChange = (size: string) => {
         setSelectedSize(size);
