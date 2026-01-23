@@ -100,6 +100,30 @@ export default function DashboardClient({ webhookSecret }: { webhookSecret: stri
         }
     };
 
+    const handleDeleteProduct = async (printfulId: string) => {
+        if (!confirm("Are you sure you want to deactivate this product? It will no longer show on the homepage.")) return;
+
+        setIsLoading(true);
+        try {
+            const res = await fetch(`/api/dashboard/products?printfulId=${printfulId}`, {
+                method: "DELETE",
+                headers: { "x-webhook-secret": webhookSecret }
+            });
+            const result = await res.json();
+            if (result.success) {
+                setMessage({ type: 'success', text: `Product ${printfulId} deactivated successfully.` });
+                fetchData();
+            } else {
+                setMessage({ type: 'error', text: result.error || "Failed to delete product" });
+            }
+        } catch (error) {
+            console.error("Failed to delete product", error);
+            setMessage({ type: 'error', text: "Internal Server Error" });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const totalPages = Math.ceil(totalProducts / itemsPerPage);
 
     return (
@@ -232,6 +256,15 @@ export default function DashboardClient({ webhookSecret }: { webhookSecret: stri
                                                     >
                                                         <svg className="w-5 h-5 focus:animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                        </svg>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteProduct(product.printfulId)}
+                                                        className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
+                                                        title="Deactivate product"
+                                                    >
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                                         </svg>
                                                     </button>
                                                     <Link
