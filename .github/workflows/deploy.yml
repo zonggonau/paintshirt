@@ -24,7 +24,7 @@ jobs:
           set -e
           cd /var/www/projek/tshirt
           
-          echo "Syncing code with GitHub...."
+          echo "Syncing code with GitHub..."
           git fetch origin master
           git reset --hard origin/master
           
