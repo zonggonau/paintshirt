@@ -27,7 +27,7 @@
     "drizzle-orm": "^0.45.1",
     "lodash.shuffle": "^4.2.0",
     "next": "16.1.2",
-    "next-auth": "5.0.0-beta.25",
+    "next-auth": "5.0.0-beta.30",
     "postgres": "^3.4.8",
     "printful-request": "^2.0.0",
     "react": "19.2.3",
