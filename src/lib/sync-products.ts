@@ -169,6 +169,23 @@ export async function syncProducts(
             }
 
             for (const syncProduct of syncProductsList) {
+                // [Optimization] Check if we can skip syncing this product
+                const existing = await db
+                    .select({ id: products.id, variantsCount: sql<number>`count(${productVariants.id})` })
+                    .from(products)
+                    .leftJoin(productVariants, eq(products.id, productVariants.productId))
+                    .where(eq(products.printfulId, String(syncProduct.id)))
+                    .groupBy(products.id)
+                    .limit(1);
+
+                // If product exists and variant count matches, we can skip full detail fetch
+                // This prevents "synct berulang" for unchanged products
+                if (existing.length > 0 && Number(existing[0].variantsCount) === syncProduct.variants) {
+                    console.log(`[Sync] Skipping product ${syncProduct.id} (Already up to date)`);
+                    totalProducts++;
+                    continue;
+                }
+
                 const { added, updated } = await syncSingleProductDetail(syncProduct.id);
                 productsAdded += added;
                 productsUpdated += updated;
@@ -650,14 +667,23 @@ async function syncSingleProductDetail(printfulProductId: number): Promise<{ add
 export async function deleteProductByPrintfulId(printfulId: string | number) {
     if (!db) return;
 
-    // We can either set isActive to false or delete it
-    // Deactivating is safer to preserve order history
-    await db
-        .update(products)
-        .set({ isActive: false, updatedAt: new Date() })
-        .where(eq(products.printfulId, String(printfulId)));
+    try {
+        // 1. Delete from Printful API first
+        console.log(`[Sync] Deleting product ${printfulId} from Printful...`);
+        await printful.delete(`store/products/${printfulId}`);
 
-    console.log(`[Sync] Product ${printfulId} deactivated.`);
+        // 2. Deactivate in local database
+        // We set isActive to false instead of hard-delete to keep data integrity for existing orders
+        await db
+            .update(products)
+            .set({ isActive: false, updatedAt: new Date() })
+            .where(eq(products.printfulId, String(printfulId)));
+
+        console.log(`[Sync] Product ${printfulId} successfully removed from Printful & Database.`);
+    } catch (error) {
+        console.error(`[Sync] Failed to delete product ${printfulId} from Printful:`, error);
+        throw error;
+    }
 }
 
 /**

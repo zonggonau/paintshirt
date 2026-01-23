@@ -54,6 +54,10 @@ class PrintfulClient {
     async post(endpoint: string, body: any, options?: RequestInit) {
         return this.request("POST", endpoint, body, options);
     }
+
+    async delete(endpoint: string, options?: RequestInit) {
+        return this.request("DELETE", endpoint, undefined, options);
+    }
 }
 
 export const printful = new PrintfulClient(apiKey || "dummy_key");
