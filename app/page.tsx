@@ -5,7 +5,6 @@ import { eq, and } from "drizzle-orm";
 import BrandsSection from "../src/components/BrandsSection";
 import { CollectionTwoGrid, CollectionThreeGrid, CollectionCarousel, CollectionSixGrid } from "../src/components/CollectionTemplates";
 import Link from "next/link";
-import shuffle from "lodash.shuffle";
 
 
 async function getProducts(): Promise<{ products: any[]; error?: string }> {

@@ -232,7 +232,7 @@ export async function getSyncLogs(limit = 10) {
         return [];
     }
 
-    return db.select().from(syncLogs).orderBy(desc(syncLogs.startedAt)).limit(limit);
+    return db.select().from(syncLogs).orderBy(desc(syncLogs.startedAt), desc(syncLogs.id)).limit(limit);
 }
 
 /**
@@ -248,7 +248,7 @@ export async function getProductsFromDB(): Promise<PrintfulProduct[]> {
         .select()
         .from(products)
         .where(eq(products.isActive, true))
-        .orderBy(desc(products.updatedAt));
+        .orderBy(desc(products.updatedAt), desc(products.id));
 
     // Get variants and categories for each product
     const result = await Promise.all(
@@ -308,7 +308,7 @@ export async function getProductsForUI(page = 1, limit = 20, categoryName?: stri
                 .from(products)
                 .innerJoin(productCategories, eq(products.id, productCategories.productId))
                 .where(and(eq(products.isActive, true), eq(productCategories.categoryId, dbCategory[0].id)))
-                .orderBy(desc(products.updatedAt))
+                .orderBy(desc(products.updatedAt), desc(products.id))
                 .limit(limit)
                 .offset(offset);
 
@@ -333,7 +333,7 @@ export async function getProductsForUI(page = 1, limit = 20, categoryName?: stri
         .select()
         .from(products)
         .where(eq(products.isActive, true))
-        .orderBy(desc(products.updatedAt))
+        .orderBy(desc(products.updatedAt), desc(products.id))
         .limit(limit)
         .offset(offset);
 
