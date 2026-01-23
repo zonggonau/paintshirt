@@ -56,7 +56,7 @@ export default async function RootLayout({
       <body suppressHydrationWarning>
         <WishlistProvider>
           <Layout categories={categories}>
-            <main className="min-h-screen">{children}</main>
+            {children}
           </Layout>
         </WishlistProvider>
 
