@@ -7,11 +7,12 @@ export const metadata = {
     description: "Manage Printful product synchronization",
 };
 
-export default async function DashboardPage() {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("admin_session");
+import { auth } from "../../src/auth";
 
-    if (!session || session.value !== "authenticated") {
+export default async function DashboardPage() {
+    const session = await auth();
+
+    if (!session) {
         redirect("/login");
     }
 
