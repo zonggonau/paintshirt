@@ -1,143 +1,82 @@
-import shuffle from "lodash.shuffle";
-import { printful, fetchWithRetry } from "../src/lib/printful-client";
+import { getProductsFromDB, getCategoriesFromDB, getBrandsFromDB, mapDBVariantToPrintful } from "../src/lib/sync-products";
 import { formatVariantName } from "../src/lib/format-variant-name";
-import { PrintfulProduct, PrintfulCategory } from "../src/types";
-import { productCache } from "../src/lib/product-cache";
+import { db, products as productsTable, productVariants, productCategories, categories as categoriesTable } from "../src/db";
+import { eq, and } from "drizzle-orm";
 import BrandsSection from "../src/components/BrandsSection";
 import { CollectionTwoGrid, CollectionThreeGrid, CollectionCarousel, CollectionSixGrid } from "../src/components/CollectionTemplates";
 import Link from "next/link";
+import shuffle from "lodash.shuffle";
 
-export const revalidate = 600; // 10 minutes cache
 
-
-async function getProducts(): Promise<{ products: PrintfulProduct[]; error?: string }> {
+async function getProducts(): Promise<{ products: any[]; error?: string }> {
   try {
-    // Check cache first
-    const cachedProducts = productCache.get();
+    const products = await getProductsFromDB();
 
-    if (cachedProducts) {
-      console.log("Serving from cache");
-      return {
-        products: shuffle(cachedProducts),
-      };
-    }
-
-    console.log("Fetching fresh data from Printful");
-
-    // Fetch product IDs with retry logic
-    const productIdsResponse = await fetchWithRetry<any>(
-      () => printful.get("sync/products?limit=12")
-    );
-    const productIds = productIdsResponse.result;
-
-    // Fetch all products
-    const allProducts = await Promise.all(
-      productIds.map(async ({ id }: any) =>
-        await fetchWithRetry<any>(() => printful.get(`sync/products/${id}`))
-      )
-    );
-
-    const products: PrintfulProduct[] = allProducts.map(
-      (response: any) => {
-        const { sync_product, sync_variants } = response.result;
-        return {
-          ...sync_product,
-          variants: sync_variants.map(({ name, ...variant }: any) => ({
-            name: formatVariantName(name),
-            ...variant,
-          })),
-        };
-      }
-    );
-
-    // Store in cache
-    productCache.set(products);
+    // Format variant names
+    const formattedProducts = products.map(p => ({
+      ...p,
+      variants: p.variants.map((v: any) => ({
+        ...v,
+        name: formatVariantName(v.name)
+      }))
+    }));
 
     return {
-      products: shuffle(products),
+      products: shuffle(formattedProducts).slice(0, 12),
     };
   } catch (error) {
-    console.error("Error fetching products:", error);
-
+    console.error("Error fetching products from DB:", error);
     return {
       products: [],
-      error: "Failed to load products. Please try again later.",
+      error: "Failed to load products from database.",
     };
   }
 }
 
-// Fetch collections with products
+// Fetch collections with products from DB
 async function getCollectionsWithProducts(): Promise<{
-  collections: Array<{ category: PrintfulCategory; products: PrintfulProduct[] }>;
+  collections: Array<{ category: any; products: any[] }>;
   error?: string;
 }> {
   try {
-    // Fetch categories
-    const categoriesResponse = await fetchWithRetry<any>(
-      () => printful.get("categories")
-    );
-    const categories: PrintfulCategory[] = categoriesResponse.result.categories;
+    if (!db) return { collections: [] };
 
-    // Find Collections parent (ID: 116)
-    const collectionsParent = categories.find(cat => cat.id === 116);
-    if (!collectionsParent) {
-      return { collections: [] };
-    }
+    // Get all categories that are sub-collections (parentId corresponds to Printful ID 116 or similar)
+    // For now, let's just get all categories with products
+    const allCategories = await db.select().from(categoriesTable);
 
-    // Get all sub-collections
-    const subCollections = categories
-      .filter(cat => cat.parent_id === 116)
-      .sort((a, b) => (a.catalog_position ?? a.id) - (b.catalog_position ?? b.id));
-
-    // Fetch products for each collection
+    // Filter categories that have products (you can refine this filter)
     const collectionsWithProducts = await Promise.all(
-      subCollections.map(async (collection) => {
-        try {
-          // Fetch products for this category
-          const productsResponse = await fetchWithRetry<any>(
-            () => printful.get(`sync/products?limit=6&category_id=${collection.id}`)
-          );
+      allCategories.slice(0, 4).map(async (collection) => {
+        const productLinks = await db
+          .select({ product: productsTable })
+          .from(productsTable)
+          .innerJoin(productCategories, eq(productsTable.id, productCategories.productId))
+          .where(eq(productCategories.categoryId, collection.id))
+          .limit(6);
 
-          const productIds = productsResponse.result || [];
-
-          // Fetch product details
-          const productDetails = await Promise.all(
-            productIds.slice(0, 6).map(async ({ id }: any) =>
-              await fetchWithRetry<any>(() => printful.get(`sync/products/${id}`))
-            )
-          );
-
-          const products: PrintfulProduct[] = productDetails.map((response: any) => {
-            const { sync_product, sync_variants } = response.result;
-            return {
-              ...sync_product,
-              variants: sync_variants.map(({ name, ...variant }: any) => ({
-                name: formatVariantName(name),
-                ...variant,
-              })),
-            };
-          });
-
+        const products = await Promise.all(productLinks.map(async ({ product: p }) => {
+          const variantsData = await db.select().from(productVariants).where(eq(productVariants.productId, p.id));
+          const variants = variantsData.map(mapDBVariantToPrintful);
           return {
-            category: collection,
-            products,
+            ...p,
+            id: p.printfulId,
+            variants: variants.map(v => ({ ...v, name: formatVariantName(v.name) }))
           };
-        } catch (error) {
-          console.error(`Error fetching products for collection ${collection.title}:`, error);
-          return {
-            category: collection,
-            products: [],
-          };
-        }
+        }));
+
+        return {
+          category: { ...collection, title: collection.name },
+          products,
+        };
       })
     );
 
-    // Filter out collections with no products
     return {
       collections: collectionsWithProducts.filter(c => c.products.length > 0),
     };
   } catch (error) {
-    console.error("Error fetching collections:", error);
+    console.error("Error fetching collections from DB:", error);
     return {
       collections: [],
       error: "Failed to load collections.",
@@ -145,24 +84,9 @@ async function getCollectionsWithProducts(): Promise<{
   }
 }
 
-// Fetch all brands (sub-categories of Brands parent category ID: 159)
-async function getBrands(): Promise<PrintfulCategory[]> {
-  try {
-    const categoriesResponse = await fetchWithRetry<any>(
-      () => printful.get("categories")
-    );
-    const categories: PrintfulCategory[] = categoriesResponse.result.categories;
-
-    // Get brands parent category (ID: 159) and its children
-    const brands = categories
-      .filter(cat => cat.parent_id === 159)
-      .sort((a, b) => (a.catalog_position ?? a.id) - (b.catalog_position ?? b.id));
-
-    return brands;
-  } catch (error) {
-    console.error("Error fetching brands:", error);
-    return [];
-  }
+async function getBrands(): Promise<any[]> {
+  const brands = await getBrandsFromDB();
+  return brands.map(b => ({ ...b, title: b.name }));
 }
 
 export default async function Home() {

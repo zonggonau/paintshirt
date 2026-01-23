@@ -99,7 +99,9 @@ export interface PrintfulProduct {
   id: string;
   name: string;
   description?: string;
+  thumbnail_url?: string;
   variants: Array<{
+    id?: string;
     external_id: string;
     name: string;
     size?: string;
@@ -111,6 +113,14 @@ export interface PrintfulProduct {
       type: string;
       preview_url: string;
     }>;
+    options?: any[];
+    in_stock?: boolean;
+  }>;
+  categories?: Array<{
+    id: number;
+    printfulId: number;
+    name: string;
+    imageUrl?: string | null;
   }>;
 }
 
@@ -121,9 +131,11 @@ export type PrintfulShippingItem = {
 
 export interface PrintfulCategory {
   id: number;
+  printful_id?: number;
   parent_id: number;
   image_url: string;
   catalog_position: number;
   size: string;
   title: string;
+  name?: string;
 }

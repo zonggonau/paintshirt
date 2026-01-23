@@ -29,10 +29,15 @@ const Product = (product: any) => {
         ({ type }: any) => type === "preview"
     );
 
-    const formattedPrice = new Intl.NumberFormat("en-US", {
+    if (!activeVariant) {
+        return null; // Or some fallback UI
+    }
+
+    const price = typeof activeVariant.retail_price === 'number' ? activeVariant.retail_price : Number(activeVariant.retail_price);
+    const formattedPrice = isNaN(price) ? "Price N/A" : new Intl.NumberFormat("en-US", {
         style: "currency",
-        currency: activeVariant.currency,
-    }).format(activeVariant.retail_price);
+        currency: activeVariant.currency || "USD",
+    }).format(price);
 
     const addToWishlist = (e: React.MouseEvent) => {
         e.preventDefault();

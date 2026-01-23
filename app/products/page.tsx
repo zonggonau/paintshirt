@@ -1,16 +1,11 @@
 
 
-import { printful, fetchWithRetry } from "../../src/lib/printful-client";
+import { getCategoriesFromDB, getProductsForUI } from "../../src/lib/sync-products";
 import { formatVariantName } from "../../src/lib/format-variant-name";
 import { PrintfulProduct } from "../../src/types";
-import { productCache } from "../../src/lib/product-cache";
 import ProductGrid from "../../src/components/ProductGrid";
-import shuffle from "lodash.shuffle";
 import { Metadata } from 'next';
 
-// Cache for 10 minutes - optimized for performance
-// Products don't change frequently in Printful, so longer cache is better
-export const revalidate = 600;
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
@@ -18,95 +13,39 @@ export const metadata: Metadata = {
     description: 'Browse our complete collection of premium print-on-demand products.',
 };
 
-
-// Update type to include total count
-
-import { PrintfulCategory } from "../../src/types";
-
 async function getCategories(): Promise<Record<number, string>> {
     try {
-        // Fetch all categories
-        const response = await fetchWithRetry<any>(
-            () => printful.get("categories")
-        );
-
-        const categories: PrintfulCategory[] = response.result.categories;
-
-        // Create map of ID -> Title
-        const categoryMap: Record<number, string> = {};
-        categories.forEach(cat => {
-            categoryMap[cat.id] = cat.title;
-        });
-
-        return categoryMap;
+        return await getCategoriesFromDB();
     } catch (error) {
-        console.error("Error fetching categories:", error);
+        console.error("Error fetching categories from DB:", error);
         return {};
     }
 }
 
-
-// Helper to invert map or find ID
-function findCategoryIdByName(name: string, map: Record<number, string>): number | undefined {
-    const entry = Object.entries(map).find(([_, title]) => title.toLowerCase() === name.toLowerCase());
-    return entry ? parseInt(entry[0]) : undefined;
-}
-
-async function getProducts(page: number = 1, limit: number = 20, categoryIds?: number[]): Promise<{ products: PrintfulProduct[]; total: number; error?: string }> {
+async function getProducts(page: number = 1, limit: number = 20, categoryName?: string): Promise<{ products: any[]; total: number; error?: string }> {
     try {
-        const offset = (page - 1) * limit;
-        let endpoint = `sync/products?limit=${limit}&offset=${offset}`;
+        const { products, total } = await getProductsForUI(page, limit, categoryName);
 
-        if (categoryIds && categoryIds.length > 0) {
-            endpoint += `&category_id=${categoryIds.join(',')}`;
-        }
-
-        console.log(`Fetching products: ${endpoint}`);
-
-        // Fetch product IDs with retry logic
-        const productIdsResponse = await fetchWithRetry<any>(
-            () => printful.get(endpoint)
-        );
-
-        const productIds = productIdsResponse.result;
-
-        // Fetch all products details
-        const allProducts = await Promise.all(
-            productIds.map(async ({ id }: any) =>
-                await fetchWithRetry<any>(() => printful.get(`sync/products/${id}`))
-            )
-        );
-
-        const products: PrintfulProduct[] = allProducts.map(
-            (response: any) => {
-                const { sync_product, sync_variants } = response.result;
-                return {
-                    ...sync_product,
-                    variants: sync_variants.map(({ name, ...variant }: any) => ({
-                        name: formatVariantName(name),
-                        ...variant,
-                    })),
-                };
-            }
-        );
-
-        // Use actual product count, not paging.total which can be inaccurate for category filters
-        // If we got less than limit products, that means this is the last page
-        const actualTotal = products.length < limit
-            ? (page - 1) * limit + products.length  // Last page
-            : productIdsResponse.paging?.total || products.length;  // Use paging total if available
+        // Format variant names for consistency if needed, though they should be stored formatted or handled in UI
+        const formattedProducts = products.map(p => ({
+            ...p,
+            variants: p.variants.map((v: any) => ({
+                ...v,
+                name: formatVariantName(v.name)
+            }))
+        }));
 
         return {
-            products: products,
-            total: actualTotal
+            products: formattedProducts,
+            total: total
         };
     } catch (error) {
-        console.error("Error fetching products:", error);
+        console.error("Error fetching products from DB:", error);
 
         return {
             products: [],
             total: 0,
-            error: "Failed to load products. Please try again later.",
+            error: "Failed to load products from database.",
         };
     }
 }
@@ -125,15 +64,8 @@ export default async function ProductsPage({
     // Fetch categories first to get the ID map
     const categoryMap = await getCategories();
 
-    // Determine category ID if search param exists
-    let categoryIds: number[] | undefined = undefined;
-    if (categoryName) {
-        const id = findCategoryIdByName(categoryName, categoryMap);
-        if (id) categoryIds = [id];
-    }
-
     // Fetch products with optional category filter
-    const { products, total, error } = await getProducts(page, limit, categoryIds);
+    const { products, total, error } = await getProducts(page, limit, categoryName);
 
     return (
         <div className="bg-gray-50 min-h-screen py-12">

@@ -1,95 +1,27 @@
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import ProductDetailImages from "../../../../src/components/ProductDetailImages";
-import { printful, fetchWithRetry } from "../../../../src/lib/printful-client";
 import { formatVariantName } from "../../../../src/lib/format-variant-name";
 import ProductDetailClient from "../../../../src/components/ProductDetailClient";
 import RelatedProducts from "../../../../src/components/RelatedProducts";
-import { productCache } from "../../../../src/lib/product-cache";
 import { PrintfulCategory } from "../../../../src/types";
 
-export const revalidate = 600; // 10 minutes cache
 
+
+import { getProductFromDB, getProductsFromDB, getBrandsFromDB } from "../../../../src/lib/sync-products";
 
 async function getProduct(id: string) {
-    try {
-        const response = await fetchWithRetry<any>(
-            () => printful.get(`sync/products/${id}`)
-        );
-
-        const { sync_product, sync_variants } = response.result;
-
-        return {
-            ...sync_product,
-            variants: sync_variants.map(({ name, ...variant }: any) => ({
-                name: formatVariantName(name),
-                ...variant,
-            })),
-        };
-    } catch (error) {
-        console.error("Error fetching product:", error);
-        return null;
-    }
+    return await getProductFromDB(id);
 }
 
 // Shared function to fetch all products for Related Products section
 async function getAllProducts() {
-    try {
-        const cachedProducts = productCache.get();
-        if (cachedProducts) return cachedProducts;
-
-        // Fetch product IDs
-        const productIdsResponse = await fetchWithRetry<any>(
-            () => printful.get("sync/products")
-        );
-        const productIds = productIdsResponse.result;
-
-        // Fetch all products
-        const allProducts = await Promise.all(
-            productIds.map(async ({ id }: any) =>
-                await fetchWithRetry<any>(() => printful.get(`sync/products/${id}`))
-            )
-        );
-
-        const products = allProducts.map(
-            (response: any) => {
-                const { sync_product, sync_variants } = response.result;
-                return {
-                    ...sync_product,
-                    variants: sync_variants.map(({ name, ...variant }: any) => ({
-                        name: formatVariantName(name),
-                        ...variant,
-                    })),
-                };
-            }
-        );
-
-        productCache.set(products);
-        return products;
-    } catch (error) {
-        console.error("Error fetching all products:", error);
-        return [];
-    }
+    return await getProductsFromDB();
 }
 
 // Fetch all brands (sub-categories of Brands parent category ID: 159)
-async function getBrands(): Promise<PrintfulCategory[]> {
-    try {
-        const response = await fetchWithRetry<any>(
-            () => printful.get("categories")
-        );
-        const categories: PrintfulCategory[] = response.result.categories;
-
-        // Get brands parent category (ID: 159) and its children
-        const brands = categories
-            .filter(cat => cat.parent_id === 159)
-            .sort((a, b) => (a.catalog_position ?? a.id) - (b.catalog_position ?? b.id));
-
-        return brands;
-    } catch (error) {
-        console.error("Error fetching brands:", error);
-        return [];
-    }
+async function getBrands() {
+    return await getBrandsFromDB();
 }
 
 export async function generateMetadata({
@@ -108,6 +40,13 @@ export async function generateMetadata({
     }
 
     const [firstVariant] = product.variants;
+    if (!firstVariant) {
+        return {
+            title: product.name,
+            description: product.description || undefined,
+        };
+    }
+
     const previewImage = firstVariant.files.find(
         (file: any) => file.type === "preview"
     )?.preview_url || "";
@@ -198,6 +137,10 @@ export default async function ProductDetailPage({
 
 
     const [firstVariant] = product.variants;
+    if (!firstVariant) {
+        notFound();
+    }
+
     const previewImage = firstVariant.files.find(
         (file: any) => file.type === "preview"
     )?.preview_url || "";
@@ -223,8 +166,8 @@ export default async function ProductDetailPage({
             "@type": "AggregateOffer",
             url: `https://printfultshirt.com/products/${id}/${slug}`,
             priceCurrency: firstVariant.currency,
-            lowPrice: Math.min(...product.variants.map((v: any) => v.retail_price)),
-            highPrice: Math.max(...product.variants.map((v: any) => v.retail_price)),
+            lowPrice: Math.min(...product.variants.map((v: any) => Number(v.retail_price))),
+            highPrice: Math.max(...product.variants.map((v: any) => Number(v.retail_price))),
             offerCount: product.variants.length,
             availability: "https://schema.org/InStock",
             seller: {
