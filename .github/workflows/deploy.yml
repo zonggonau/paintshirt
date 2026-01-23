@@ -13,14 +13,25 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Deploy to VPS
+    - name: Deploy to VPS via SSH
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.VPS_HOST }}
         username: ${{ secrets.VPS_USER }}
         key: ${{ secrets.VPS_SSH_KEY }}
+        port: ${{ secrets.VPS_PORT || 22 }}
         script: |
+          set -e
           cd /var/www/projek/tshirt
-          git pull origin master
-          docker compose down
+          
+          echo "Syncing code with GitHub..."
+          git fetch origin master
+          git reset --hard origin/master
+          
+          echo "Building and updating containers..."
           docker compose up -d --build
+          
+          echo "Cleaning up old images..."
+          docker image prune -f
+          
+          echo "✅ Deployment Successful!"
