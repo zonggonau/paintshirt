@@ -538,6 +538,7 @@ async function syncSingleProductDetail(printfulProductId: number): Promise<{ add
             .update(products)
             .set({
                 name: syncProductData.name,
+                description: syncProductData.description || null,
                 thumbnailUrl: syncProductData.thumbnail_url,
                 syncedAt: new Date(),
                 updatedAt: new Date(),
@@ -554,6 +555,7 @@ async function syncSingleProductDetail(printfulProductId: number): Promise<{ add
                 printfulId: String(syncProductData.id),
                 externalId: syncProductData.external_id,
                 name: syncProductData.name,
+                description: syncProductData.description || null,
                 thumbnailUrl: syncProductData.thumbnail_url,
                 syncedAt: new Date(),
             })
@@ -626,15 +628,38 @@ async function syncSingleProductDetail(printfulProductId: number): Promise<{ add
             const mainCategoryId = catalogProductResponse.result?.product?.main_category_id;
 
             if (mainCategoryId) {
-                const dbCategory = await db
+                // 1. Check if category exists in our DB
+                let dbCategory = await db
                     .select()
                     .from(categories)
                     .where(eq(categories.printfulId, mainCategoryId))
                     .limit(1);
 
+                // 2. If it doesn't exist, fetch it from Printful and save it!
+                if (dbCategory.length === 0) {
+                    console.log(`[Sync] Category ${mainCategoryId} missing, fetching from Printful...`);
+                    try {
+                        const allCatsRes = await printful.get("categories");
+                        const allCats: PrintfulCatalogCategory[] = allCatsRes.result || [];
+                        const targetCat = allCats.find(c => c.id === mainCategoryId);
+
+                        if (targetCat) {
+                            const [newCat] = await db.insert(categories).values({
+                                printfulId: targetCat.id,
+                                parentId: targetCat.parent_id || null,
+                                name: targetCat.title,
+                                imageUrl: targetCat.image_url,
+                            }).returning();
+                            dbCategory = [newCat];
+                        }
+                    } catch (catErr) {
+                        console.error(`[Sync] Failed to fetch missing category ${mainCategoryId}:`, catErr);
+                    }
+                }
+
                 if (dbCategory.length > 0) {
-                    // Check link
-                    const link = await db
+                    // 3. Link product to this category in junction table
+                    const existingLink = await db
                         .select()
                         .from(productCategories)
                         .where(
@@ -645,11 +670,12 @@ async function syncSingleProductDetail(printfulProductId: number): Promise<{ add
                         )
                         .limit(1);
 
-                    if (link.length === 0) {
+                    if (existingLink.length === 0) {
                         await db.insert(productCategories).values({
                             productId,
                             categoryId: dbCategory[0].id,
                         });
+                        console.log(`[Sync] Linked product ${productId} to category ${dbCategory[0].name}`);
                     }
                 }
             }
