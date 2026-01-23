@@ -308,6 +308,7 @@ export async function getProductsForUI(page = 1, limit = 20, categoryName?: stri
                 .from(products)
                 .innerJoin(productCategories, eq(products.id, productCategories.productId))
                 .where(and(eq(products.isActive, true), eq(productCategories.categoryId, dbCategory[0].id)))
+                .orderBy(desc(products.updatedAt))
                 .limit(limit)
                 .offset(offset);
 
@@ -332,6 +333,7 @@ export async function getProductsForUI(page = 1, limit = 20, categoryName?: stri
         .select()
         .from(products)
         .where(eq(products.isActive, true))
+        .orderBy(desc(products.updatedAt))
         .limit(limit)
         .offset(offset);
 

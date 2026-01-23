@@ -22,7 +22,7 @@ async function getProducts(): Promise<{ products: any[]; error?: string }> {
     }));
 
     return {
-      products: shuffle(formattedProducts).slice(0, 12),
+      products: formattedProducts.slice(0, 12),
     };
   } catch (error) {
     console.error("Error fetching products from DB:", error);
