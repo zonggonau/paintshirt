@@ -1,6 +1,6 @@
 import { db, products, productVariants, syncLogs, categories, productCategories } from "@/src/db";
 import { printful } from "./printful-client";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, desc } from "drizzle-orm";
 import { PrintfulProduct, PrintfulCategory } from "../types";
 
 export interface SyncResult {
@@ -232,7 +232,7 @@ export async function getSyncLogs(limit = 10) {
         return [];
     }
 
-    return db.select().from(syncLogs).orderBy(syncLogs.startedAt).limit(limit);
+    return db.select().from(syncLogs).orderBy(desc(syncLogs.startedAt)).limit(limit);
 }
 
 /**
@@ -247,7 +247,8 @@ export async function getProductsFromDB(): Promise<PrintfulProduct[]> {
     const productsData = await db
         .select()
         .from(products)
-        .where(eq(products.isActive, true));
+        .where(eq(products.isActive, true))
+        .orderBy(desc(products.updatedAt));
 
     // Get variants and categories for each product
     const result = await Promise.all(
