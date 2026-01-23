@@ -29,6 +29,9 @@ export default function DashboardClient({ webhookSecret }: { webhookSecret: stri
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
 
+    // Selection State
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
     const fetchData = async () => {
         setIsFetchingData(true);
         try {
@@ -47,6 +50,8 @@ export default function DashboardClient({ webhookSecret }: { webhookSecret: stri
             if (prodResult.success) {
                 setProducts(prodResult.data);
                 setTotalProducts(prodResult.total);
+                // Clear selection when page change or data refresh to avoid stale IDs
+                setSelectedIds([]);
             }
         } catch (error) {
             console.error("Failed to fetch data", error);
@@ -100,6 +105,40 @@ export default function DashboardClient({ webhookSecret }: { webhookSecret: stri
         }
     };
 
+    const handleBulkSync = async () => {
+        if (selectedIds.length === 0) return;
+
+        setIsLoading(true);
+        setMessage({ type: 'success', text: `Starting bulk sync for ${selectedIds.length} products...` });
+
+        let successCount = 0;
+        let failCount = 0;
+
+        try {
+            // Process in sequence to avoid rate limits and keep it simple
+            for (const id of selectedIds) {
+                const res = await fetch(`/api/sync/products?productId=${id}&type=manual`, {
+                    method: "POST",
+                    headers: { "x-webhook-secret": webhookSecret }
+                });
+                const result = await res.json();
+                if (result.success) successCount++;
+                else failCount++;
+            }
+
+            setMessage({
+                type: successCount > 0 ? 'success' : 'error',
+                text: `Bulk sync finished. Success: ${successCount}, Failed: ${failCount}.`
+            });
+            fetchData();
+        } catch (error) {
+            setMessage({ type: 'error', text: "Bulk sync interrupted due to error." });
+        } finally {
+            setIsLoading(false);
+            setSelectedIds([]);
+        }
+    };
+
     const handleDeleteProduct = async (printfulId: string) => {
         if (!confirm("Are you sure you want to deactivate this product? It will no longer show on the homepage.")) return;
 
@@ -121,6 +160,22 @@ export default function DashboardClient({ webhookSecret }: { webhookSecret: stri
             setMessage({ type: 'error', text: "Internal Server Error" });
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.length === products.length) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(products.map(p => p.printfulId));
+        }
+    };
+
+    const toggleSelect = (id: string) => {
+        if (selectedIds.includes(id)) {
+            setSelectedIds(selectedIds.filter(idx => idx !== id));
+        } else {
+            setSelectedIds([...selectedIds, id]);
         }
     };
 
@@ -184,21 +239,35 @@ export default function DashboardClient({ webhookSecret }: { webhookSecret: stri
                 </div>
 
                 {activeTab === 'products' && (
-                    <div className="flex items-center gap-3 pb-4">
-                        <label className="text-xs font-bold text-gray-400 uppercase">Show:</label>
-                        <select
-                            value={itemsPerPage}
-                            onChange={(e) => {
-                                setItemsPerPage(Number(e.target.value));
-                                setCurrentPage(1);
-                            }}
-                            className="bg-gray-50 border border-gray-200 text-gray-900 text-xs rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-1.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
-                        >
-                            <option value={10}>10</option>
-                            <option value={20}>20</option>
-                            <option value={50}>50</option>
-                            <option value={100}>100</option>
-                        </select>
+                    <div className="flex items-center gap-6 pb-4">
+                        {selectedIds.length > 0 && (
+                            <div className="flex items-center gap-2 animate-fade-in">
+                                <span className="text-xs font-bold text-blue-600 uppercase tracking-widest">{selectedIds.length} Selected</span>
+                                <button
+                                    onClick={handleBulkSync}
+                                    disabled={isLoading}
+                                    className="px-3 py-1.5 bg-blue-600 text-white text-[10px] font-bold uppercase rounded hover:bg-blue-700 transition"
+                                >
+                                    {isLoading ? 'Syncing...' : 'Bulk Sync'}
+                                </button>
+                            </div>
+                        )}
+                        <div className="flex items-center gap-3">
+                            <label className="text-xs font-bold text-gray-400 uppercase">Show:</label>
+                            <select
+                                value={itemsPerPage}
+                                onChange={(e) => {
+                                    setItemsPerPage(Number(e.target.value));
+                                    setCurrentPage(1);
+                                }}
+                                className="bg-gray-50 border border-gray-200 text-gray-900 text-xs rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-1.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                            >
+                                <option value={10}>10</option>
+                                <option value={20}>20</option>
+                                <option value={50}>50</option>
+                                <option value={100}>100</option>
+                            </select>
+                        </div>
                     </div>
                 )}
             </div>
@@ -215,17 +284,33 @@ export default function DashboardClient({ webhookSecret }: { webhookSecret: stri
                     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden mb-6">
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
-                                <thead className="bg-gray-50 dark:bg-gray-900/50">
+                                <thead className="bg-gray-50 dark:bg-gray-900/50 text-xs font-bold text-gray-400 uppercase tracking-widest">
                                     <tr>
-                                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Product</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Variants</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Status</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Actions</th>
+                                        <th className="px-6 py-4 w-4">
+                                            <input
+                                                type="checkbox"
+                                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                checked={products.length > 0 && selectedIds.length === products.length}
+                                                onChange={toggleSelectAll}
+                                            />
+                                        </th>
+                                        <th className="px-6 py-4">Product</th>
+                                        <th className="px-6 py-4">Variants</th>
+                                        <th className="px-6 py-4">Status</th>
+                                        <th className="px-6 py-4 text-right">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className={`divide-y divide-gray-100 dark:divide-gray-700 ${isFetchingData ? 'opacity-50' : ''}`}>
                                     {products.map((product) => (
-                                        <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/40 transition-colors">
+                                        <tr key={product.id} className={`hover:bg-gray-50 dark:hover:bg-gray-900/40 transition-colors ${selectedIds.includes(product.printfulId) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
+                                            <td className="px-6 py-4">
+                                                <input
+                                                    type="checkbox"
+                                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                    checked={selectedIds.includes(product.printfulId)}
+                                                    onChange={() => toggleSelect(product.printfulId)}
+                                                />
+                                            </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-4">
                                                     {product.thumbnailUrl && (
@@ -247,7 +332,7 @@ export default function DashboardClient({ webhookSecret }: { webhookSecret: stri
                                                     {product.isActive ? 'Active' : 'Inactive'}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 text-right">
+                                            <td className="px-6 py-4 text-right text-gray-400">
                                                 <div className="flex justify-end gap-2">
                                                     <button
                                                         onClick={() => handleSyncProduct(product.printfulId)}
@@ -269,7 +354,7 @@ export default function DashboardClient({ webhookSecret }: { webhookSecret: stri
                                                     </button>
                                                     <Link
                                                         href={`/products/${product.id}/${product.name.toLowerCase().replace(/[\s/]+/g, '-')}`}
-                                                        className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg transition"
+                                                        className="p-2 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg transition"
                                                         title="View on store"
                                                     >
                                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -283,7 +368,7 @@ export default function DashboardClient({ webhookSecret }: { webhookSecret: stri
                                     ))}
                                     {products.length === 0 && !isFetchingData && (
                                         <tr>
-                                            <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                                            <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
                                                 No products found.
                                             </td>
                                         </tr>
