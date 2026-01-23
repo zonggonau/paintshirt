@@ -1,6 +1,6 @@
 import { db, products, productVariants, syncLogs, categories, productCategories } from "@/src/db";
 import { printful } from "./printful-client";
-import { eq, and, sql, desc } from "drizzle-orm";
+import { eq, and, sql, desc, inArray } from "drizzle-orm";
 import { PrintfulProduct, PrintfulCategory } from "../types";
 
 export interface SyncResult {
@@ -71,6 +71,27 @@ export function mapDBVariantToPrintful(v: any) {
 }
 
 /**
+ * Parse size and color from variant name if options are missing
+ */
+function parseSizeAndColor(name: string) {
+    const parts = name.split(' / ');
+    if (parts.length >= 3) {
+        return {
+            color: parts[parts.length - 2].trim(),
+            size: parts[parts.length - 1].trim()
+        };
+    } else if (parts.length === 2) {
+        const commonSizes = ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', 'XS', '2XS', 'One size'];
+        const val = parts[1].trim();
+        if (commonSizes.some(s => val.includes(s))) {
+            return { color: null, size: val };
+        }
+        return { color: val, size: null };
+    }
+    return { color: null, size: null };
+}
+
+/**
  * Fetch all categories from Printful and sync to database
  */
 export async function syncCategories(): Promise<{ added: number; updated: number }> {
@@ -81,7 +102,10 @@ export async function syncCategories(): Promise<{ added: number; updated: number
 
     try {
         const response = await printful.get("categories");
-        const catList: PrintfulCatalogCategory[] = response.result || [];
+        // Safe check for result format
+        const catList: PrintfulCatalogCategory[] = Array.isArray(response.result)
+            ? response.result
+            : (response.result?.categories || []);
 
         for (const cat of catList) {
             const existing = await db
@@ -171,17 +195,23 @@ export async function syncProducts(
             for (const syncProduct of syncProductsList) {
                 // [Optimization] Check if we can skip syncing this product
                 const existing = await db
-                    .select({ id: products.id, variantsCount: sql<number>`count(${productVariants.id})` })
+                    .select({
+                        id: products.id,
+                        variantsCount: sql<number>`count(DISTINCT ${productVariants.id})`,
+                        categoriesCount: sql<number>`count(DISTINCT ${productCategories.categoryId})`
+                    })
                     .from(products)
                     .leftJoin(productVariants, eq(products.id, productVariants.productId))
+                    .leftJoin(productCategories, eq(products.id, productCategories.productId))
                     .where(eq(products.printfulId, String(syncProduct.id)))
                     .groupBy(products.id)
                     .limit(1);
 
-                // If product exists and variant count matches, we can skip full detail fetch
-                // This prevents "synct berulang" for unchanged products
-                if (existing.length > 0 && Number(existing[0].variantsCount) === syncProduct.variants) {
-                    console.log(`[Sync] Skipping product ${syncProduct.id} (Already up to date)`);
+                // If product exists, variant count matches AND it has categories, we can skip
+                if (existing.length > 0 &&
+                    Number(existing[0].variantsCount) === syncProduct.variants &&
+                    Number(existing[0].categoriesCount) > 0) {
+                    console.log(`[Sync] Skipping product ${syncProduct.id} (Already up to date with categories)`);
                     totalProducts++;
                     continue;
                 }
@@ -306,38 +336,83 @@ export async function getProductsFromDB(): Promise<PrintfulProduct[]> {
 /**
  * Get products for UI with pagination and filtering
  */
-export async function getProductsForUI(page = 1, limit = 20, categoryName?: string) {
+export async function getProductsForUI(page = 1, limit = 20, categoryFilter?: string | number) {
     if (!db) return { products: [], total: 0 };
 
     const offset = (page - 1) * limit;
 
-    if (categoryName) {
-        // Filter by category name
+    if (categoryFilter) {
+        // Find category by ID (number) or Name (string)
+        const isId = !isNaN(Number(categoryFilter));
+
         const dbCategory = await db
             .select()
             .from(categories)
-            .where(eq(categories.name, categoryName))
+            .where(isId ? eq(categories.printfulId, Number(categoryFilter)) : eq(categories.name, String(categoryFilter)))
             .limit(1);
 
         if (dbCategory.length > 0) {
+            // Get all sub-category IDs recursively
+            const allCategoryIds = [dbCategory[0].id];
+
+            // Helper function to get children
+            const getChildren = async (parentIds: number[]) => {
+                const children = await db
+                    .select({ id: categories.id, printfulId: categories.printfulId })
+                    .from(categories)
+                    .where(inArray(categories.parentId, parentIds));
+
+                if (children.length > 0) {
+                    const childIds = children.map(c => c.id);
+                    const childPrintfulIds = children.map(c => c.printfulId);
+
+                    // Filter out IDs already in the list to avoid infinite loops if data is corrupt
+                    const newChildIds = childIds.filter(id => !allCategoryIds.includes(id));
+                    if (newChildIds.length > 0) {
+                        allCategoryIds.push(...newChildIds);
+                        await getChildren(childPrintfulIds);
+                    }
+                }
+            };
+
+            // Start recursive search for sub-categories
+            // Note: targetCat.parent_id in DB corresponds to Printful category ID
+            await getChildren([dbCategory[0].printfulId]);
+
             const filteredProducts = await db
                 .select({ product: products })
                 .from(products)
                 .innerJoin(productCategories, eq(products.id, productCategories.productId))
-                .where(and(eq(products.isActive, true), eq(productCategories.categoryId, dbCategory[0].id)))
+                .where(and(
+                    eq(products.isActive, true),
+                    inArray(productCategories.categoryId, allCategoryIds)
+                ))
                 .orderBy(desc(products.updatedAt), desc(products.id))
                 .limit(limit)
                 .offset(offset);
 
             const [countResult] = await db
-                .select({ count: sql<number>`count(*)` })
-                .from(productCategories)
-                .where(eq(productCategories.categoryId, dbCategory[0].id));
+                .select({ count: sql<number>`count(DISTINCT ${products.id})` })
+                .from(products)
+                .innerJoin(productCategories, eq(products.id, productCategories.productId))
+                .where(and(
+                    eq(products.isActive, true),
+                    inArray(productCategories.categoryId, allCategoryIds)
+                ));
 
             const productsWithData = await Promise.all(filteredProducts.map(async ({ product: p }) => {
-                const variantsData = await db.select().from(productVariants).where(eq(productVariants.productId, p.id));
+                const [variantsData, catData] = await Promise.all([
+                    db.select().from(productVariants).where(eq(productVariants.productId, p.id)),
+                    db.select({ id: categories.printfulId, name: categories.name })
+                        .from(productCategories)
+                        .innerJoin(categories, eq(productCategories.categoryId, categories.id))
+                        .where(eq(productCategories.productId, p.id))
+                        .limit(1)
+                ]);
+
                 const variants = variantsData.map(mapDBVariantToPrintful);
-                return { ...p, id: p.printfulId, variants };
+                const category = catData.length > 0 ? catData[0] : null;
+                return { ...p, id: p.printfulId, variants, category };
             }));
 
             return { products: productsWithData, total: Number(countResult.count) };
@@ -360,9 +435,18 @@ export async function getProductsForUI(page = 1, limit = 20, categoryName?: stri
         .where(eq(products.isActive, true));
 
     const productsWithData = await Promise.all(productsData.map(async (p) => {
-        const variantsData = await db.select().from(productVariants).where(eq(productVariants.productId, p.id));
+        const [variantsData, catData] = await Promise.all([
+            db.select().from(productVariants).where(eq(productVariants.productId, p.id)),
+            db.select({ id: categories.printfulId, name: categories.name })
+                .from(productCategories)
+                .innerJoin(categories, eq(productCategories.categoryId, categories.id))
+                .where(eq(productCategories.productId, p.id))
+                .limit(1)
+        ]);
+
         const variants = variantsData.map(mapDBVariantToPrintful);
-        return { ...p, id: p.printfulId, variants };
+        const category = catData.length > 0 ? catData[0] : null;
+        return { ...p, id: p.printfulId, variants, category };
     }));
 
     return { products: productsWithData, total: Number(totalCountResult.count) };
@@ -384,9 +468,33 @@ export async function getCategoriesFromDB() {
 }
 
 /**
- * Get single product from DB by Printful ID
+ * Get raw categories from database for layout
  */
-export async function getProductFromDB(printfulId: string): Promise<PrintfulProduct | null> {
+export async function getRawCategoriesFromDB(): Promise<PrintfulCategory[]> {
+    if (!db) return [];
+
+    try {
+        const dbCategories = await db.select().from(categories);
+        return dbCategories.map(cat => ({
+            id: cat.id,
+            printful_id: cat.printfulId,
+            parent_id: cat.parentId || 0,
+            image_url: cat.imageUrl || "",
+            catalog_position: 0,
+            size: "",
+            title: cat.name,
+            name: cat.name
+        }));
+    } catch (error) {
+        console.error("Error fetching raw categories from DB:", error);
+        return [];
+    }
+}
+
+/**
+ * Get single product from DB by Printful ID with category info
+ */
+export async function getProductFromDB(printfulId: string): Promise<any | null> {
     if (!db) return null;
 
     try {
@@ -400,34 +508,21 @@ export async function getProductFromDB(printfulId: string): Promise<PrintfulProd
 
         const product = productData[0];
 
-        const variantsData = await db
-            .select()
-            .from(productVariants)
-            .where(eq(productVariants.productId, product.id));
+        const [variantsData, catData] = await Promise.all([
+            db.select().from(productVariants).where(eq(productVariants.productId, product.id)),
+            db.select({ id: categories.printfulId, name: categories.name })
+                .from(productCategories)
+                .innerJoin(categories, eq(productCategories.categoryId, categories.id))
+                .where(eq(productCategories.productId, product.id))
+                .limit(1)
+        ]);
 
-        // Get categories through junction table
-        const categoriesData = await db
-            .select({
-                id: categories.id,
-                printfulId: categories.printfulId,
-                name: categories.name,
-                imageUrl: categories.imageUrl,
-            })
-            .from(productCategories)
-            .innerJoin(categories, eq(productCategories.categoryId, categories.id))
-            .where(eq(productCategories.productId, product.id));
+        const variants = variantsData.map(mapDBVariantToPrintful);
+        const category = catData.length > 0 ? catData[0] : null;
 
-        // Map to PrintfulProduct compatibility for UI
-        return {
-            id: product.printfulId,
-            name: product.name,
-            description: product.description || undefined,
-            thumbnail_url: product.thumbnailUrl || undefined,
-            variants: variantsData.map(mapDBVariantToPrintful),
-            categories: categoriesData,
-        };
+        return { ...product, id: product.printfulId, variants, category };
     } catch (e) {
-        console.error(`[DB] Failed to get product ${printfulId}:`, e);
+        console.error("[DB] Failed to get product:", e);
         return null;
     }
 }
@@ -573,13 +668,22 @@ async function syncSingleProductDetail(printfulProductId: number): Promise<{ add
             .where(eq(productVariants.printfulVariantId, String(variant.id)))
             .limit(1);
 
-        // Extract size and color from options
+        // Extract size and color from options, fallback to name parsing
         const sizeOption = variant.options?.find(
             (opt) => opt.id === "size" || opt.id.toLowerCase().includes("size")
         );
         const colorOption = variant.options?.find(
             (opt) => opt.id === "color" || opt.id.toLowerCase().includes("color")
         );
+
+        let vSize = sizeOption?.value || null;
+        let vColor = colorOption?.value || null;
+
+        if (!vSize || !vColor) {
+            const parsed = parseSizeAndColor(variant.name);
+            if (!vSize) vSize = parsed.size;
+            if (!vColor) vColor = parsed.color;
+        }
 
         const previewUrl =
             variant.files?.find((f) => f.type === "preview")?.preview_url ||
@@ -591,8 +695,8 @@ async function syncSingleProductDetail(printfulProductId: number): Promise<{ add
                 .update(productVariants)
                 .set({
                     name: variant.name,
-                    size: sizeOption?.value || null,
-                    color: colorOption?.value || null,
+                    size: vSize,
+                    color: vColor,
                     retailPrice: variant.retail_price,
                     currency: variant.currency,
                     previewUrl: previewUrl,
@@ -608,8 +712,8 @@ async function syncSingleProductDetail(printfulProductId: number): Promise<{ add
                 printfulVariantId: String(variant.id),
                 externalId: variant.external_id,
                 name: variant.name,
-                size: sizeOption?.value || null,
-                color: colorOption?.value || null,
+                size: vSize,
+                color: vColor,
                 retailPrice: variant.retail_price,
                 currency: variant.currency,
                 previewUrl: previewUrl,
@@ -640,7 +744,9 @@ async function syncSingleProductDetail(printfulProductId: number): Promise<{ add
                     console.log(`[Sync] Category ${mainCategoryId} missing, fetching from Printful...`);
                     try {
                         const allCatsRes = await printful.get("categories");
-                        const allCats: PrintfulCatalogCategory[] = allCatsRes.result || [];
+                        const allCats: PrintfulCatalogCategory[] = Array.isArray(allCatsRes.result)
+                            ? allCatsRes.result
+                            : (allCatsRes.result?.categories || []);
                         const targetCat = allCats.find(c => c.id === mainCategoryId);
 
                         if (targetCat) {

@@ -26,6 +26,13 @@ export default function DebugCategoriesPage() {
         fetchCategories();
     }, []);
 
+    // Helper to extract categories array safely
+    const categoriesArray = Array.isArray(data?.result)
+        ? data.result
+        : Array.isArray(data)
+            ? data
+            : [];
+
     return (
         <div className="p-8 font-mono text-sm bg-gray-900 text-green-400 min-h-screen">
             <h1 className="text-2xl font-bold mb-6 text-white border-b border-gray-700 pb-2">
@@ -43,24 +50,31 @@ export default function DebugCategoriesPage() {
             {data ? (
                 <div className="space-y-6">
                     <div className="bg-gray-800 p-4 rounded border border-gray-700">
-                        <p className="text-blue-300 mb-2">Total Categories Found: {data.result?.length || 0}</p>
-                        <p className="text-gray-400">Status Code: {data.code}</p>
+                        <p className="text-blue-300 mb-2">Structure Info:</p>
+                        <ul className="list-disc list-inside text-gray-400 text-xs">
+                            <li>Type of data: {typeof data}</li>
+                            <li>Is data.result an array? {Array.isArray(data.result) ? "Yes" : "No"} ({typeof data.result})</li>
+                            <li>Total Categories Detected: {categoriesArray.length}</li>
+                        </ul>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {data.result?.slice(0, 12).map((cat: any) => (
+                        {categoriesArray.slice(0, 12).map((cat: any) => (
                             <div key={cat.id} className="bg-gray-800 p-4 rounded border border-gray-700 hover:border-blue-500 transition">
                                 <div className="flex items-center gap-4 mb-3">
                                     {cat.image_url && (
                                         <img src={cat.image_url} alt="" className="w-12 h-12 rounded object-cover bg-white" />
                                     )}
                                     <div>
-                                        <p className="font-bold text-white">{cat.title}</p>
-                                        <p className="text-[10px] text-gray-500">ID: {cat.id} | Parent: {cat.parent_id}</p>
+                                        <p className="font-bold text-white">{cat.title || cat.name}</p>
+                                        <p className="text-[10px] text-gray-400">ID: {cat.id} | Parent: {cat.parent_id}</p>
                                     </div>
                                 </div>
                             </div>
                         ))}
+                        {categoriesArray.length === 0 && (
+                            <p className="col-span-full text-yellow-500">No categories array found in the expected format.</p>
+                        )}
                     </div>
 
                     <div className="mt-8">

@@ -8,6 +8,16 @@ import useWishlistState from "../hooks/useWishlistState";
 import useSnipcartCount from "../hooks/useSnipcartCount";
 import { PrintfulCategory } from "../types";
 
+const slugify = (text: string) => {
+    return text
+        .toString()
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-')     // Replace spaces with -
+        .replace(/[^\w-]+/g, '')   // Remove all non-word chars
+        .replace(/--+/g, '-');    // Replace multiple - with single -
+};
+
 const Layout = ({ children, categories = [] }: { children: React.ReactNode, categories?: PrintfulCategory[] }) => {
     const router = useRouter();
     const wishlistState = useWishlistState();
@@ -24,6 +34,9 @@ const Layout = ({ children, categories = [] }: { children: React.ReactNode, cate
         const roots: PrintfulCategory[] = [];
         const childrenMap: Record<number, PrintfulCategory[]> = {};
 
+        // User requested specific root categories in this order
+        const allowedRootPrintfulIds = [1, 2, 3, 4, 5, 93];
+
         // Sort categories by catalog_position if available, otherwise by ID
         const sortedCategories = [...categories].sort((a, b) => {
             const posA = a.catalog_position ?? a.id;
@@ -32,14 +45,47 @@ const Layout = ({ children, categories = [] }: { children: React.ReactNode, cate
         });
 
         sortedCategories.forEach(cat => {
+            const printfulId = Number(cat.printful_id || cat.id);
+
             if (cat.parent_id === 0) {
-                roots.push(cat);
+                // Only add if it's in the allowed roots list
+                if (allowedRootPrintfulIds.includes(printfulId)) {
+                    roots.push(cat);
+                }
             } else {
                 if (!childrenMap[cat.parent_id]) {
                     childrenMap[cat.parent_id] = [];
                 }
                 childrenMap[cat.parent_id].push(cat);
             }
+        });
+
+        // Flatten logic: If a root has only ONE child and that child's name contains "All ",
+        // promote the grandchildren to be direct children of the root.
+        // This is specifically for "Hats" -> "All hats" -> [Snapbacks, etc.]
+        roots.forEach(root => {
+            const rootId = root.printful_id || root.id;
+            const children = childrenMap[rootId] || [];
+
+            if (children.length === 1) {
+                const onlyChild = children[0];
+                const onlyChildId = onlyChild.printful_id || onlyChild.id;
+                const grandChildren = childrenMap[onlyChildId] || [];
+
+                if (grandChildren.length > 0 &&
+                    (onlyChild.title.toLowerCase().startsWith("all ") || onlyChild.name?.toLowerCase().startsWith("all "))) {
+                    // Replace the single "All" wrapper with its children
+                    childrenMap[rootId] = grandChildren;
+                    console.log(`[Layout] Flattened category ${root.title} by removing ${onlyChild.title} wrapper`);
+                }
+            }
+        });
+
+        // Re-sort roots to match the EXACT requested order
+        roots.sort((a, b) => {
+            const idA = Number(a.printful_id || a.id);
+            const idB = Number(b.printful_id || b.id);
+            return allowedRootPrintfulIds.indexOf(idA) - allowedRootPrintfulIds.indexOf(idB);
         });
 
         return { roots, childrenMap };
@@ -49,7 +95,8 @@ const Layout = ({ children, categories = [] }: { children: React.ReactNode, cate
     // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         if (isMegaMenuOpen && categoryTree.roots.length > 0 && activeRootId === null) {
-            setActiveRootId(categoryTree.roots[0].id);
+            const firstRoot = categoryTree.roots[0];
+            setActiveRootId(firstRoot.printful_id || firstRoot.id);
         }
     }, [isMegaMenuOpen, categoryTree.roots]);
 
@@ -67,31 +114,33 @@ const Layout = ({ children, categories = [] }: { children: React.ReactNode, cate
                 );
 
                 if (matchingRoot) {
-                    setActiveRootId(matchingRoot.id);
+                    setActiveRootId(matchingRoot.printful_id || matchingRoot.id);
                     return;
                 }
 
-                // If not found in roots, search in sub-categories
+                // If not found in roots, search in sub-categories (Level 2 & Level 3)
                 for (const root of categoryTree.roots) {
-                    const subCategories = categoryTree.childrenMap[root.id] || [];
-                    const matchingSubCat = subCategories.find(sub =>
-                        sub.title.toLowerCase() === categoryParam.toLowerCase()
-                    );
+                    const rootId = root.printful_id || root.id;
+                    const level2 = categoryTree.childrenMap[rootId] || [];
 
-                    if (matchingSubCat) {
-                        setActiveRootId(root.id);
+                    // Check Level 2
+                    const matchingL2 = level2.find(sub =>
+                        (sub.title || sub.name || "").toLowerCase() === categoryParam.toLowerCase()
+                    );
+                    if (matchingL2) {
+                        setActiveRootId(rootId);
                         return;
                     }
 
-                    // Search in level 3
-                    for (const subCat of subCategories) {
-                        const level3Categories = categoryTree.childrenMap[subCat.id] || [];
-                        const matchingLevel3 = level3Categories.find(l3 =>
-                            l3.title.toLowerCase() === categoryParam.toLowerCase()
+                    // Check Level 3
+                    for (const sub of level2) {
+                        const subId = sub.printful_id || sub.id;
+                        const level3 = categoryTree.childrenMap[subId] || [];
+                        const matchingL3 = level3.find(l3 =>
+                            (l3.title || l3.name || "").toLowerCase() === categoryParam.toLowerCase()
                         );
-
-                        if (matchingLevel3) {
-                            setActiveRootId(root.id);
+                        if (matchingL3) {
+                            setActiveRootId(rootId);
                             return;
                         }
                     }
@@ -250,17 +299,18 @@ const Layout = ({ children, categories = [] }: { children: React.ReactNode, cate
                                     {isMegaMenuOpen && (
                                         <div className="mt-2 space-y-1 animate-fade-in">
                                             {categoryTree.roots.map((root) => {
-                                                const hasChildren = categoryTree.childrenMap[root.id]?.length > 0;
-                                                const isExpanded = activeRootId === root.id;
+                                                const rootId = root.printful_id || root.id;
+                                                const hasChildren = categoryTree.childrenMap[rootId]?.length > 0;
+                                                const isExpanded = activeRootId === rootId;
 
                                                 return (
                                                     <div key={root.id} className="ml-2">
                                                         <button
                                                             onClick={() => {
                                                                 if (hasChildren) {
-                                                                    setActiveRootId(isExpanded ? null : root.id);
+                                                                    setActiveRootId(isExpanded ? null : rootId);
                                                                 } else {
-                                                                    router.push(`/products?category=${encodeURIComponent(root.title)}`);
+                                                                    router.push(`/products/categories/${rootId}/${slugify(root.title || root.name || "category")}`);
                                                                     setIsMenuOpen(false);
                                                                     setIsMegaMenuOpen(false);
                                                                 }
@@ -284,44 +334,46 @@ const Layout = ({ children, categories = [] }: { children: React.ReactNode, cate
                                                         </button>
 
                                                         {/* Sub-categories */}
-                                                        {isExpanded && hasChildren && (
-                                                            <div className="ml-4 mt-1 space-y-1 animate-fade-in border-l-2 border-indigo-200 pl-2">
-                                                                {categoryTree.childrenMap[root.id].map((subCat) => (
-                                                                    <div key={subCat.id}>
-                                                                        <Link
-                                                                            href={`/products?category=${encodeURIComponent(subCat.title)}`}
-                                                                            className="block px-3 py-2 text-sm text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded transition"
-                                                                            onClick={() => {
-                                                                                setIsMenuOpen(false);
-                                                                                setIsMegaMenuOpen(false);
-                                                                            }}
-                                                                        >
-                                                                            {subCat.title}
-                                                                        </Link>
+                                                        {
+                                                            isExpanded && hasChildren && (
+                                                                <div className="ml-4 mt-1 space-y-1 animate-fade-in border-l-2 border-indigo-200 pl-2">
+                                                                    {categoryTree.childrenMap[rootId].map((subCat) => (
+                                                                        <div key={subCat.id}>
+                                                                            <Link
+                                                                                href={`/products/categories/${subCat.id}/${slugify(subCat.title || subCat.name || "category")}`}
+                                                                                className="block px-3 py-2 text-sm text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded transition"
+                                                                                onClick={() => {
+                                                                                    setIsMenuOpen(false);
+                                                                                    setIsMegaMenuOpen(false);
+                                                                                }}
+                                                                            >
+                                                                                {subCat.title || subCat.name}
+                                                                            </Link>
 
-                                                                        {/* Level 3 Sub-categories */}
-                                                                        {categoryTree.childrenMap[subCat.id]?.length > 0 && (
-                                                                            <div className="ml-3 mt-1 space-y-1 border-l border-gray-200 pl-2">
-                                                                                {categoryTree.childrenMap[subCat.id].map((level3) => (
-                                                                                    <Link
-                                                                                        key={level3.id}
-                                                                                        href={`/products?category=${encodeURIComponent(level3.title)}`}
-                                                                                        className="block px-2 py-1.5 text-xs text-gray-500 hover:text-indigo-600 rounded transition flex items-center"
-                                                                                        onClick={() => {
-                                                                                            setIsMenuOpen(false);
-                                                                                            setIsMegaMenuOpen(false);
-                                                                                        }}
-                                                                                    >
-                                                                                        <span className="w-1 h-1 rounded-full bg-gray-300 mr-2"></span>
-                                                                                        {level3.title}
-                                                                                    </Link>
-                                                                                ))}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        )}
+                                                                            {/* Level 3 Sub-categories */}
+                                                                            {categoryTree.childrenMap[subCat.printful_id || subCat.id]?.length > 0 && (
+                                                                                <div className="ml-3 mt-1 space-y-1 border-l border-gray-200 pl-2">
+                                                                                    {categoryTree.childrenMap[subCat.printful_id || subCat.id].map((level3) => (
+                                                                                        <Link
+                                                                                            key={level3.id}
+                                                                                            href={`/products/categories/${level3.id}/${slugify(level3.title || level3.name || "category")}`}
+                                                                                            className="block px-2 py-1.5 text-xs text-gray-500 hover:text-indigo-600 rounded transition flex items-center"
+                                                                                            onClick={() => {
+                                                                                                setIsMenuOpen(false);
+                                                                                                setIsMegaMenuOpen(false);
+                                                                                            }}
+                                                                                        >
+                                                                                            <span className="w-1 h-1 rounded-full bg-gray-300 mr-2"></span>
+                                                                                            {level3.title || level3.name}
+                                                                                        </Link>
+                                                                                    ))}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )
+                                                        }
                                                     </div>
                                                 );
                                             })}
@@ -377,19 +429,19 @@ const Layout = ({ children, categories = [] }: { children: React.ReactNode, cate
                                     {categoryTree.roots.map((root) => (
                                         <li key={root.id}>
                                             <button
-                                                className={`w-full text-left px-3 py-2.5 rounded-lg transition-all flex items-center justify-between group ${activeRootId === root.id
+                                                className={`w-full text-left px-3 py-2.5 rounded-lg transition-all flex items-center justify-between group ${activeRootId === (root.printful_id || root.id)
                                                     ? "bg-indigo-50 text-indigo-700 font-semibold"
                                                     : "text-gray-700 hover:bg-gray-50 font-medium"
                                                     }`}
-                                                onMouseEnter={() => setActiveRootId(root.id)}
+                                                onMouseEnter={() => setActiveRootId(root.printful_id || root.id)}
                                                 onClick={() => {
-                                                    router.push(`/products?category=${encodeURIComponent(root.title)}`);
+                                                    router.push(`/products/categories/${root.printful_id || root.id}/${slugify(root.title)}`);
                                                     setIsMegaMenuOpen(false);
                                                 }}
                                             >
                                                 <span>{root.title}</span>
                                                 <svg
-                                                    className={`w-4 h-4 transition-transform ${activeRootId === root.id ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-600'}`}
+                                                    className={`w-4 h-4 transition-transform ${activeRootId === (root.printful_id || root.id) ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-600'}`}
                                                     fill="none"
                                                     stroke="currentColor"
                                                     viewBox="0 0 24 24"
@@ -407,47 +459,63 @@ const Layout = ({ children, categories = [] }: { children: React.ReactNode, cate
                                 <div className="flex-1 bg-gray-50/50 flex flex-col max-h-[600px]">
                                     <div className="py-6 px-6 border-b border-gray-200">
                                         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                            {categoryTree.roots.find(r => r.id === activeRootId)?.title} - Categories
+                                            {categoryTree.roots.find(r => (r.printful_id || r.id) === activeRootId)?.title} - Categories
                                         </h3>
                                     </div>
                                     <div className="flex-1 overflow-y-auto custom-scrollbar py-6 px-6">
-                                        <div className="grid grid-cols-6 gap-x-8 gap-y-6">
+                                        <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-x-6 gap-y-10">
                                             {categoryTree.childrenMap[activeRootId].map((subCat) => (
-                                                <div key={subCat.id} className="space-y-2">
+                                                <div key={subCat.id} className="flex flex-col space-y-4">
+                                                    {/* Sub-category Header with Image */}
                                                     <Link
-                                                        href={`/products?category=${encodeURIComponent(subCat.title)}`}
-                                                        className="block font-semibold text-gray-900 hover:text-indigo-600 transition-colors"
+                                                        href={`/products/categories/${subCat.printful_id || subCat.id}/${slugify(subCat.title || subCat.name || "")}`}
+                                                        className="group flex flex-col space-y-3"
                                                         onClick={() => setIsMegaMenuOpen(false)}
                                                     >
-                                                        {subCat.title}
+                                                        <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-gray-100 border border-gray-200 shadow-sm transition-transform duration-300 group-hover:scale-[1.02] group-hover:shadow-md">
+                                                            {subCat.image_url ? (
+                                                                <img
+                                                                    src={subCat.image_url}
+                                                                    alt={subCat.title}
+                                                                    className="w-full h-full object-cover"
+                                                                />
+                                                            ) : (
+                                                                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                                                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                                    </svg>
+                                                                </div>
+                                                            )}
+                                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors"></div>
+                                                        </div>
+                                                        <span className="font-bold text-gray-900 group-hover:text-indigo-600 transition-colors uppercase tracking-tight text-sm">
+                                                            {subCat.title || subCat.name}
+                                                        </span>
                                                     </Link>
 
                                                     {/* Level 3: Sub-Sub-Categories */}
-                                                    {categoryTree.childrenMap[subCat.id] && categoryTree.childrenMap[subCat.id].length > 0 && (
-                                                        <ul className="space-y-1.5 ml-0">
-                                                            {categoryTree.childrenMap[subCat.id].map((level3) => (
+                                                    {categoryTree.childrenMap[subCat.printful_id || subCat.id] && categoryTree.childrenMap[subCat.printful_id || subCat.id].length > 0 ? (
+                                                        <ul className="space-y-1.5 border-l border-gray-100 pl-2">
+                                                            {categoryTree.childrenMap[subCat.printful_id || subCat.id].map((level3) => (
                                                                 <li key={level3.id}>
                                                                     <Link
-                                                                        href={`/products?category=${encodeURIComponent(level3.title)}`}
-                                                                        className="text-sm text-gray-600 hover:text-indigo-600 transition-colors flex items-center group"
+                                                                        href={`/products/categories/${level3.printful_id || level3.id}/${slugify(level3.title || level3.name || "")}`}
+                                                                        className="text-xs text-gray-600 hover:text-indigo-600 hover:translate-x-1 transition-all flex items-center group/item"
                                                                         onClick={() => setIsMegaMenuOpen(false)}
                                                                     >
-                                                                        <span className="w-1 h-1 rounded-full bg-gray-300 mr-2 group-hover:bg-indigo-500"></span>
-                                                                        {level3.title}
+                                                                        <span className="w-1.5 h-1.5 rounded-full bg-gray-200 mr-2 group-hover/item:bg-indigo-500 transition-colors"></span>
+                                                                        {level3.title || level3.name}
                                                                     </Link>
                                                                 </li>
                                                             ))}
                                                         </ul>
-                                                    )}
-
-                                                    {/* If no level 3, show "Shop all" link */}
-                                                    {(!categoryTree.childrenMap[subCat.id] || categoryTree.childrenMap[subCat.id].length === 0) && (
+                                                    ) : (
                                                         <Link
-                                                            href={`/products?category=${encodeURIComponent(subCat.title)}`}
-                                                            className="text-sm text-gray-500 hover:text-indigo-600 transition-colors inline-flex items-center"
+                                                            href={`/products/categories/${subCat.printful_id || subCat.id}/${slugify(subCat.title || subCat.name || "")}`}
+                                                            className="text-xs font-medium text-indigo-500 hover:text-indigo-700 transition-colors inline-flex items-center"
                                                             onClick={() => setIsMegaMenuOpen(false)}
                                                         >
-                                                            Shop all →
+                                                            Shop Collection →
                                                         </Link>
                                                     )}
                                                 </div>
@@ -463,7 +531,7 @@ const Layout = ({ children, categories = [] }: { children: React.ReactNode, cate
                                     <div className="text-center">
                                         <p className="text-gray-500 mb-4">No sub-categories available</p>
                                         <Link
-                                            href={`/products?category=${encodeURIComponent(categoryTree.roots.find(r => r.id === activeRootId)?.title || '')}`}
+                                            href={`/products/categories/${activeRootId}/${slugify(categoryTree.roots.find(r => (r.printful_id || r.id) === activeRootId)?.title || '')}`}
                                             className="inline-flex items-center px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
                                             onClick={() => setIsMegaMenuOpen(false)}
                                         >

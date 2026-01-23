@@ -24,6 +24,14 @@ const getProductSlug = (name: string) => {
         .replace(/(^-|-$)/g, '');
 };
 
+// Helper to get structured product URL
+const getProductUrl = (product: any) => {
+    const slug = getProductSlug(product.name);
+    const catId = product.category?.id || "uncategorized";
+    const catSlug = getProductSlug(product.category?.name || "all");
+    return `/products/categories/${catId}/${catSlug}/${product.id}/${slug}`;
+};
+
 /**
  * 2-Grid Layout: Large impactful images
  */
@@ -46,7 +54,7 @@ export function CollectionTwoGrid({ title, products, categorySlug }: CollectionT
                     const image = product.variants?.[0]?.files?.find((f: any) => f.type === 'preview')?.preview_url;
 
                     return (
-                        <Link key={product.id} href={`/products/${product.id}/${getProductSlug(product.name)}`} className="group relative aspect-[4/5] md:aspect-square rounded-2xl overflow-hidden block">
+                        <Link key={product.id} href={getProductUrl(product)} className="group relative aspect-[4/5] md:aspect-square rounded-2xl overflow-hidden block">
                             {image && (
                                 <img src={image} alt={product.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                             )}
@@ -87,7 +95,7 @@ export function CollectionThreeGrid({ title, products, categorySlug }: Collectio
                     const image = product.variants?.[0]?.files?.find((f: any) => f.type === 'preview')?.preview_url;
 
                     return (
-                        <Link key={product.id} href={`/products/${product.id}/${getProductSlug(product.name)}`} className="group block">
+                        <Link key={product.id} href={getProductUrl(product)} className="group block">
                             <div className="relative aspect-square rounded-xl overflow-hidden bg-gray-100 mb-4">
                                 {image && (
                                     <img src={image} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
@@ -134,7 +142,7 @@ export function CollectionCarousel({ title, products, categorySlug }: Collection
                         const image = product.variants?.[0]?.files?.find((f: any) => f.type === 'preview')?.preview_url;
 
                         return (
-                            <Link key={product.id} href={`/products/${product.id}/${getProductSlug(product.name)}`} className="min-w-[280px] md:min-w-[320px] snap-center group block bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-all">
+                            <Link key={product.id} href={getProductUrl(product)} className="min-w-[280px] md:min-w-[320px] snap-center group block bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-all">
                                 <div className="aspect-[4/5] rounded-xl overflow-hidden bg-gray-100 mb-4 relative">
                                     {image && (
                                         <img src={image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -175,7 +183,7 @@ export function CollectionSixGrid({ title, products, categorySlug }: CollectionT
                     const image = product.variants?.[0]?.files?.find((f: any) => f.type === 'preview')?.preview_url;
 
                     return (
-                        <Link key={product.id} href={`/products/${product.id}/${getProductSlug(product.name)}`} className="group block">
+                        <Link key={product.id} href={getProductUrl(product)} className="group block">
                             <div className="aspect-square rounded-lg overflow-hidden bg-gray-100 mb-3 relative group-hover:ring-2 ring-indigo-500 transition-all">
                                 {image && (
                                     <img src={image} alt={product.name} className="w-full h-full object-cover" />

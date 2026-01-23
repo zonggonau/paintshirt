@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   description: "High quality print-on-demand products powered by Printful",
 };
 
-import { printful, fetchWithRetry } from "../src/lib/printful-client";
+import { getRawCategoriesFromDB } from "../src/lib/sync-products";
 import { PrintfulCategory } from "../src/types";
 
 // Cache layout for 10 minutes (categories don't change often)
@@ -18,10 +18,8 @@ export const revalidate = 600;
 // Helper to fetch categories
 async function getCategories(): Promise<PrintfulCategory[]> {
   try {
-    const response = await fetchWithRetry<any>(
-      () => printful.get("categories")
-    );
-    return response.result.categories;
+    // Fetch from DB instead of API to prevent "fetch failed" and improve performance
+    return await getRawCategoriesFromDB();
   } catch (error) {
     console.error("Error fetching categories for layout:", error);
     return [];

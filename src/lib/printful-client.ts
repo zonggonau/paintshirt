@@ -39,6 +39,9 @@ class PrintfulClient {
 
             return await response.json();
         } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error(`[Printful API] Network error for URL: ${url}. Error: ${errorMessage}`);
+
             // Ensure error isn't empty object
             if (typeof error === 'object' && error !== null && Object.keys(error as object).length === 0 && !(error instanceof Error)) {
                 throw new Error(`Printful fetch failed with empty error object. URL: ${url}`);

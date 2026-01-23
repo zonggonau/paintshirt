@@ -47,11 +47,16 @@ const Product = (product: any) => {
 
     const onWishlist = isSaved(id);
 
-    const truncatedName = name.length > 15 ? name.substring(0, 15) + "..." : name;
+    const truncatedName = name.length > 30 ? name.substring(0, 30) + "..." : name;
     const slug = slugify(name);
 
+    // Construct new URL: /products/categories/[catId]/[catSlug]/[prodId]/[prodSlug]
+    const catId = product.category?.id || "uncategorized";
+    const catSlug = slugify(product.category?.name || "all");
+    const productUrl = `/products/categories/${catId}/${catSlug}/${id}/${slug}`;
+
     return (
-        <Link href={`/products/${id}/${slug}`}>
+        <Link href={productUrl}>
             <article className="group relative bg-white rounded-2xl overflow-hidden hover-lift shadow-md hover:shadow-2xl transition-all duration-300 animate-scale-in cursor-pointer">
                 <button
                     onClick={addToWishlist}

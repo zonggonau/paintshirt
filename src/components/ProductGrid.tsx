@@ -88,8 +88,9 @@ const ProductGrid: React.FC<ProductGridProps> = ({
 
     const paginate = (pageNumber: number) => {
         if (isServerSidePagination) {
-            // Server-side: Update URL
-            router.push(`/products?page=${pageNumber}`);
+            // Server-side: Update URL while keeping path (important for dynamic category routes)
+            const currentPath = window.location.pathname;
+            router.push(`${currentPath}?page=${pageNumber}`);
         } else {
             // Client-side: Update state
             setInternalPage(pageNumber);
