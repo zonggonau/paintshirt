@@ -40,18 +40,33 @@ async function getCollectionsWithProducts(): Promise<{
   try {
     if (!db) return { collections: [] };
 
-    // Get all categories that are sub-collections (parentId corresponds to Printful ID 116 or similar)
-    // For now, let's just get all categories with products
-    const allCategories = await db.select().from(categoriesTable);
+    // 1. Get categories that actually have products linked to them
+    const categoriesWithProducts = await db
+      .selectDistinct({
+        id: categoriesTable.id,
+        name: categoriesTable.name,
+        imageUrl: categoriesTable.imageUrl,
+        printfulId: categoriesTable.printfulId
+      })
+      .from(categoriesTable)
+      .innerJoin(productCategories, eq(categoriesTable.id, productCategories.categoryId))
+      .limit(4);
 
-    // Filter categories that have products (you can refine this filter)
-    const collectionsWithProducts = await Promise.all(
-      allCategories.slice(0, 4).map(async (collection) => {
+    if (categoriesWithProducts.length === 0) {
+      return { collections: [] };
+    }
+
+    const collections = await Promise.all(
+      categoriesWithProducts.map(async (collection) => {
+        // 2. Fetch up to 6 products for this specific category
         const productLinks = await db
           .select({ product: productsTable })
           .from(productsTable)
           .innerJoin(productCategories, eq(productsTable.id, productCategories.productId))
-          .where(eq(productCategories.categoryId, collection.id))
+          .where(and(
+            eq(productCategories.categoryId, collection.id),
+            eq(productsTable.isActive, true)
+          ))
           .limit(6);
 
         const products = await Promise.all(productLinks.map(async ({ product: p }) => {
@@ -72,7 +87,7 @@ async function getCollectionsWithProducts(): Promise<{
     );
 
     return {
-      collections: collectionsWithProducts.filter(c => c.products.length > 0),
+      collections: collections.filter(c => c.products.length > 0),
     };
   } catch (error) {
     console.error("Error fetching collections from DB:", error);
