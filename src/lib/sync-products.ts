@@ -640,3 +640,33 @@ async function syncSingleProductDetail(printfulProductId: number): Promise<{ add
 
     return { added, updated };
 }
+
+/**
+ * Deactivate or delete a product by its Printful ID
+ */
+export async function deleteProductByPrintfulId(printfulId: string | number) {
+    if (!db) return;
+
+    // We can either set isActive to false or delete it
+    // Deactivating is safer to preserve order history
+    await db
+        .update(products)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(eq(products.printfulId, String(printfulId)));
+
+    console.log(`[Sync] Product ${printfulId} deactivated.`);
+}
+
+/**
+ * Update stock status for a specific variant
+ */
+export async function updateVariantStock(printfulVariantId: string | number, inStock: boolean) {
+    if (!db) return;
+
+    await db
+        .update(productVariants)
+        .set({ inStock, updatedAt: new Date() })
+        .where(eq(productVariants.printfulVariantId, String(printfulVariantId)));
+
+    console.log(`[Sync] Variant ${printfulVariantId} stock updated to ${inStock}.`);
+}
