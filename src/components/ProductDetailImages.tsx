@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import Image from "next/image";
 
 export default function ProductDetailImages({ product }: { product: any }) {
     const { variants } = product;
@@ -133,19 +132,17 @@ export default function ProductDetailImages({ product }: { product: any }) {
             >
                 {selectedImageUrl && (
                     <div className="w-full h-full relative">
-                        <Image
+                        <img
                             key={selectedImageUrl}
                             src={selectedImageUrl}
-                            fill
-                            sizes="(max-width: 768px) 100vw, 50vw"
                             style={{
+                                width: "100%",
+                                height: "100%",
                                 objectFit: "cover",
                                 transition: "transform 0.2s ease-out",
                                 ...zoomStyle
                             }}
                             alt={product.name}
-                            priority
-                            className=""
                         />
                     </div>
                 )}
@@ -183,11 +180,9 @@ export default function ProductDetailImages({ product }: { product: any }) {
                                     : "hover:ring-2 hover:ring-gray-300 ring-offset-1"
                                     }`}
                             >
-                                <Image
+                                <img
                                     src={image.url}
-                                    fill
-                                    sizes="100px"
-                                    style={{ objectFit: "cover" }}
+                                    className="absolute inset-0 w-full h-full object-cover"
                                     alt={`${product.name} - ${image.color} ${image.size}`}
                                 />
                                 {image.color && (

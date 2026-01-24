@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 
 import useWishlistDispatch from "../hooks/useWishlistDispatch";
@@ -89,14 +88,11 @@ const Product = (product: any) => {
                 {/* Product Image */}
                 <div className="relative w-full aspect-square bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
                     {activeVariantFile && (
-                        <Image
+                        <img
                             src={activeVariantFile.preview_url}
-                            fill
-                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                            style={{ objectFit: "cover" }}
+                            className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                             alt={`${activeVariant.name} ${name}`}
                             title={`${activeVariant.name} ${name}`}
-                            className="group-hover:scale-110 transition-transform duration-500"
                         />
                     )}
 
