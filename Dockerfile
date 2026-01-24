@@ -17,7 +17,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml* ./
 RUN pnpm install --frozen-lockfile
 
 # ===============================================
-# Stage 2: Builder
+# Stage 2: Builder (Environment for Build & Tools)
 # ===============================================
 FROM node:20-alpine AS builder
 WORKDIR /app
@@ -33,7 +33,10 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
-# Build the application
+# ===============================================
+# Stage 2.5: Build the application
+# ===============================================
+FROM builder AS build-stage
 RUN pnpm run build
 
 # ===============================================
@@ -49,10 +52,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy necessary files from builder
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+# Copy necessary files from build-stage (not builder)
+COPY --from=build-stage /app/public ./public
+COPY --from=build-stage /app/.next/standalone ./
+COPY --from=build-stage /app/.next/static ./.next/static
 
 # Set correct permissions
 RUN chown -R nextjs:nodejs /app
