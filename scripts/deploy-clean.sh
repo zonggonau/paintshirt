@@ -3,8 +3,8 @@
 # =========================
 # CONFIG
 # =========================
-CONTAINER_NAME="nextjs"    # nama service Next.js di docker-compose
-WEBHOOK_SETUP_COMMAND="docker compose exec $CONTAINER_NAME npx tsx scripts/setup-webhooks.ts"
+SERVICE_NAME="nextjs"    # nama service di docker-compose.yml
+WEBHOOK_SETUP_COMMAND="docker compose exec $SERVICE_NAME npx tsx scripts/setup-webhooks.ts"
 
 # =========================
 # 1️⃣ Stop container & hapus volume
@@ -28,10 +28,10 @@ docker compose up -d --build --no-cache
 # 4️⃣ Sinkronisasi database & seed
 # =========================
 echo "🗄️ Sinkronisasi database..."
-docker compose exec $CONTAINER_NAME npx drizzle-kit push
+docker compose exec $SERVICE_NAME npx drizzle-kit push
 
 echo "🌱 Seed kategori utama..."
-docker compose exec $CONTAINER_NAME npm run db:seed
+docker compose exec $SERVICE_NAME npm run db:seed
 
 # =========================
 # 5️⃣ Setup webhook
