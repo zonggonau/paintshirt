@@ -7,9 +7,11 @@ import * as schema from "./schema";
 const connectionString = process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/postgres";
 
 if (!process.env.DATABASE_URL) {
-    console.warn(
-        "WARNING: DATABASE_URL is not defined. Database features will not work."
-    );
+    if (process.env.NODE_ENV === "production") {
+        console.warn("WARNING: DATABASE_URL is not defined in production. Application will fail.");
+    } else {
+        console.warn("WARNING: DATABASE_URL is not defined. Using dummy URL for build/dev consistency.");
+    }
 }
 
 // Create postgres client

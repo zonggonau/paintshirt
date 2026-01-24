@@ -5,5 +5,9 @@ export default NextAuth(authConfig).auth;
 
 export const config = {
     // Matched routes will be protected by NextAuth
-    matcher: ["/dashboard/:path*", "/api/dashboard/:path*"],
+    matcher: [
+        "/dashboard",
+        "/dashboard/:path*",
+        "/api/dashboard/:path*"
+    ]
 };

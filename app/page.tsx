@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { getProductsFromDB, getCategoriesFromDB, getBrandsFromDB, mapDBVariantToPrintful } from "../src/lib/sync-products";
 import { formatVariantName } from "../src/lib/format-variant-name";
 import { db, products as productsTable, productVariants, productCategories, categories as categoriesTable } from "../src/db";
