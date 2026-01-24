@@ -115,3 +115,39 @@ Gunakan perintah ini lewat SSH untuk memantau aplikasi:
 
 ---
 🚀 *Happy Coding!*
+
+
+
+
+Untuk menghapus seluruh sisa Docker (termasuk database lama yang mungkin korup) dan membangun ulang sistem secara benar-benar bersih di VPS, silakan jalankan rangkaian perintah "Hard Reset" berikut di terminal VPS (SSH) Anda:
+
+1. Hapus Total Kontainer & Data (Volume)
+Perintah ini akan menghentikan sistem dan menghapus seluruh isi database agar kita bisa mulai dari nol yang bersih.
+
+bash
+cd /var/www/projek/tshirt
+docker compose down -v
+2. Bersihkan Sisa Gambar & Build Cache
+Ini akan menghapus cache lama agar Docker mengunduh ulang dependensi yang benar-benar bersih.
+
+bash
+docker system prune -a -f
+3. Build & Jalankan Ulang dari Nol
+Kita akan membangun ulang kontainer tanpa menggunakan cache sama sekali (--no-cache).
+
+bash
+docker compose up -d --build --no-cache
+4. Sinkronisasi Database & Seed Kategori
+Karena database tadi kita hapus total, kita harus membuat struktur tabel baru dan menarik ulang kategori utama dari Printful.
+
+bash
+# Sinkronkan struktur tabel terbaru
+docker compose exec nextjs npx drizzle-kit push
+# Tarik ulang kategori produk
+docker compose exec nextjs npm run db:seed
+5. Setup Ulang Webhook (Wajib)
+Ini memastikan Printful mulai mengirim data ke "instalasi bersih" yang baru ini.
+
+bash
+docker compose exec nextjs npx tsx scripts/setup-webhooks.ts
+Hasil Akhir: Sistem Anda sekarang benar-benar baru. Produk akan mulai muncul secara otomatis di website setiap kali Webhook dari Printful masuk, atau Anda bisa memicu sinkronisasi manual jika diperlukan. Website juga sekarang menggunakan tag <img /> sehingga masalah gambar tidak tampil seharusnya sudah hilang total.

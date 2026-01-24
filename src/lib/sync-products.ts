@@ -30,6 +30,10 @@ interface PrintfulSyncVariant {
     variant_id: number;
     retail_price: string;
     currency: string;
+    sku?: string;
+    is_ignored?: boolean;
+    size?: string;
+    color?: string;
     product: {
         variant_id: number;
         product_id: number;
@@ -80,28 +84,30 @@ export function mapDBVariantToPrintful(v: any) {
  * - "Hat / Red" -> { color: "Red", size: null }
  */
 function parseSizeAndColor(name: string) {
-    const parts = name.split(' / ');
+    // Normalize delimiters: replace " - " with " / "
+    const normalizedName = name.replace(/\s-\s/g, ' / ');
+    const parts = normalizedName.split(' / ').map(p => p.trim());
 
-    // 3+ parts: usually [Product, Color, Size]
+    let color: string | null = null;
+    let size: string | null = null;
+
     if (parts.length >= 3) {
-        return {
-            color: parts[1].trim(),
-            size: parts[parts.length - 1].trim()
-        };
-    }
+        // [Product, Color, Size]
+        color = parts[1];
+        size = parts[parts.length - 1]; // Size is usually last
+    } else if (parts.length === 2) {
+        const val = parts[1];
+        const commonSizes = ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', 'XS', '2XS', 'One size', 'oz', '"', 'inch'];
 
-    // 2 parts: [Product, Color/Size]
-    if (parts.length === 2) {
-        const val = parts[1].trim();
-        const commonSizes = ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', 'XS', '2XS', 'One size', 'oz', '"'];
-
+        // If it looks like a size
         if (commonSizes.some(s => val.includes(s)) || /\d/.test(val)) {
-            return { color: null, size: val };
+            size = val;
+        } else {
+            color = val;
         }
-        return { color: val, size: null };
     }
 
-    return { color: null, size: null };
+    return { color, size };
 }
 
 /**
@@ -598,16 +604,21 @@ async function syncSingleProductDetail(printfulProductId: number): Promise<{ add
             .where(eq(productVariants.printfulVariantId, String(variant.id)))
             .limit(1);
 
-        // Extract size and color from options, fallback to name parsing
-        const sizeOption = variant.options?.find(
-            (opt) => opt.id === "size" || opt.id.toLowerCase().includes("size")
-        );
-        const colorOption = variant.options?.find(
-            (opt) => opt.id === "color" || opt.id.toLowerCase().includes("color")
-        );
+        // Use direct fields if available, otherwise try options or name parsing
+        let vSize = variant.size || null;
+        let vColor = variant.color || null;
 
-        let vSize = sizeOption?.value || null;
-        let vColor = colorOption?.value || null;
+        if (!vSize || !vColor) {
+            const sizeOption = variant.options?.find(
+                (opt) => opt.id === "size" || opt.id.toLowerCase().includes("size")
+            );
+            const colorOption = variant.options?.find(
+                (opt) => opt.id === "color" || opt.id.toLowerCase().includes("color")
+            );
+
+            if (!vSize) vSize = sizeOption?.value || null;
+            if (!vColor) vColor = colorOption?.value || null;
+        }
 
         if (!vSize || !vColor) {
             const parsed = parseSizeAndColor(variant.name);
