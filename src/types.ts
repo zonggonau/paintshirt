@@ -94,6 +94,8 @@ export interface ISyncProduct {
   name: string;
   variants: number;
   synced: number;
+  thumbnail_url?: string;
+  is_ignored?: boolean;
 }
 
 export interface PrintfulProduct {

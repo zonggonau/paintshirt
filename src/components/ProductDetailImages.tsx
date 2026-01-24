@@ -15,20 +15,23 @@ export default function ProductDetailImages({ product }: { product: any }) {
         (v: any) => v.external_id === activeVariantExternalId
     );
 
-    const activeVariantFile = activeVariant.files.find(
+    const activeVariantFile = activeVariant.files?.find(
         ({ type }: any) => type === "preview"
-    );
+    ) || (activeVariant.preview_url ? { preview_url: activeVariant.preview_url } : null) || (product.thumbnail_url ? { preview_url: product.thumbnail_url } : null);
 
     // Get all unique images from all variants
     const allImages = useMemo(() => {
         const imageMap = new Map();
         variants.forEach((variant: any) => {
-            const previewFile = variant.files.find((f: any) => f.type === "preview");
-            if (previewFile) {
+            const previewUrl = variant.files?.find((f: any) => f.type === "preview")?.preview_url
+                || variant.preview_url
+                || product.thumbnail_url;
+
+            if (previewUrl) {
                 // Use URL as key to avoid duplicates
-                if (!imageMap.has(previewFile.preview_url)) {
-                    imageMap.set(previewFile.preview_url, {
-                        url: previewFile.preview_url,
+                if (!imageMap.has(previewUrl)) {
+                    imageMap.set(previewUrl, {
+                        url: previewUrl,
                         variantId: variant.external_id,
                         color: variant.color || "",
                         size: variant.size || "",
@@ -176,8 +179,8 @@ export default function ProductDetailImages({ product }: { product: any }) {
                                 key={`${image.url}-${idx}`}
                                 onClick={() => setSelectedImageUrl(image.url)}
                                 className={`relative aspect-square rounded-lg overflow-hidden bg-gray-100 cursor-pointer transition ${selectedImageUrl === image.url
-                                        ? "ring-2 ring-indigo-600 ring-offset-1"
-                                        : "hover:ring-2 hover:ring-gray-300 ring-offset-1"
+                                    ? "ring-2 ring-indigo-600 ring-offset-1"
+                                    : "hover:ring-2 hover:ring-gray-300 ring-offset-1"
                                     }`}
                             >
                                 <Image

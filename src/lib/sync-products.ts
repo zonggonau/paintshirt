@@ -18,6 +18,7 @@ interface PrintfulSyncProduct {
     variants: number;
     synced: number;
     thumbnail_url?: string;
+    is_ignored?: boolean;
 }
 
 interface PrintfulSyncVariant {
@@ -625,6 +626,10 @@ async function syncSingleProductDetail(printfulProductId: number): Promise<{ add
                 name: syncProductData.name,
                 description: syncProductData.description || null,
                 thumbnailUrl: syncProductData.thumbnail_url,
+                variantsCount: syncProductData.variants || 0,
+                syncedCount: syncProductData.synced || 0,
+                isIgnored: syncProductData.is_ignored === true,
+                isActive: syncProductData.is_ignored !== true,
                 syncedAt: new Date(),
                 updatedAt: new Date(),
             })
@@ -642,6 +647,10 @@ async function syncSingleProductDetail(printfulProductId: number): Promise<{ add
                 name: syncProductData.name,
                 description: syncProductData.description || null,
                 thumbnailUrl: syncProductData.thumbnail_url,
+                variantsCount: syncProductData.variants || 0,
+                syncedCount: syncProductData.synced || 0,
+                isIgnored: syncProductData.is_ignored === true,
+                isActive: syncProductData.is_ignored !== true,
                 syncedAt: new Date(),
             })
             .returning();

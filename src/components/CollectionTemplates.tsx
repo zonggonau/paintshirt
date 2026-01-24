@@ -51,7 +51,7 @@ export function CollectionTwoGrid({ title, products, categorySlug }: CollectionT
                 {displayProducts.map((product) => {
                     const price = product.variants?.[0]?.retail_price || 0;
                     const currency = product.variants?.[0]?.currency || 'USD';
-                    const image = product.variants?.[0]?.files?.find((f: any) => f.type === 'preview')?.preview_url;
+                    const image = product.variants?.[0]?.files?.find((f: any) => f.type === 'preview')?.preview_url || product.variants?.[0]?.preview_url || product.thumbnail_url;
 
                     return (
                         <Link key={product.id} href={getProductUrl(product)} className="group relative aspect-[4/5] md:aspect-square rounded-2xl overflow-hidden block">
@@ -92,7 +92,7 @@ export function CollectionThreeGrid({ title, products, categorySlug }: Collectio
                 {displayProducts.map((product) => {
                     const price = product.variants?.[0]?.retail_price || 0;
                     const currency = product.variants?.[0]?.currency || 'USD';
-                    const image = product.variants?.[0]?.files?.find((f: any) => f.type === 'preview')?.preview_url;
+                    const image = product.variants?.[0]?.files?.find((f: any) => f.type === 'preview')?.preview_url || product.variants?.[0]?.preview_url || product.thumbnail_url;
 
                     return (
                         <Link key={product.id} href={getProductUrl(product)} className="group block">
@@ -139,7 +139,7 @@ export function CollectionCarousel({ title, products, categorySlug }: Collection
                     {displayProducts.map((product) => {
                         const price = product.variants?.[0]?.retail_price || 0;
                         const currency = product.variants?.[0]?.currency || 'USD';
-                        const image = product.variants?.[0]?.files?.find((f: any) => f.type === 'preview')?.preview_url;
+                        const image = product.variants?.[0]?.files?.find((f: any) => f.type === 'preview')?.preview_url || product.variants?.[0]?.preview_url || product.thumbnail_url;
 
                         return (
                             <Link key={product.id} href={getProductUrl(product)} className="min-w-[280px] md:min-w-[320px] snap-center group block bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-all">
@@ -180,7 +180,7 @@ export function CollectionSixGrid({ title, products, categorySlug }: CollectionT
                 {displayProducts.map((product) => {
                     const price = product.variants?.[0]?.retail_price || 0;
                     const currency = product.variants?.[0]?.currency || 'USD';
-                    const image = product.variants?.[0]?.files?.find((f: any) => f.type === 'preview')?.preview_url;
+                    const image = product.variants?.[0]?.files?.[0]?.preview_url || product.variants?.[0]?.preview_url || product.thumbnail_url;
 
                     return (
                         <Link key={product.id} href={getProductUrl(product)} className="group block">

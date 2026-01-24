@@ -57,7 +57,7 @@ export default function CollectionSection({
                 {displayProducts.map((product) => {
                     const previewImage = product.variants?.[0]?.files?.find(
                         (f: any) => f.type === 'preview'
-                    )?.preview_url;
+                    )?.preview_url || product.variants?.[0]?.preview_url || product.thumbnail_url;
 
                     const minPrice = product.variants && product.variants.length > 0
                         ? Math.min(...product.variants.map((v: any) => parseFloat(v.retail_price)))
