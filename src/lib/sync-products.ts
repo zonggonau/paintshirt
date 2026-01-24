@@ -1,6 +1,6 @@
 import { db, products, productVariants, categories, productCategories } from "@/src/db";
 import { printful } from "./printful-client";
-import { eq, and, sql, desc, inArray } from "drizzle-orm";
+import { eq, and, sql, desc, asc, inArray, like, or } from "drizzle-orm";
 import { PrintfulProduct, PrintfulCategory } from "../types";
 
 export interface SyncResult {
@@ -298,17 +298,24 @@ export async function getProductsFromDB(): Promise<PrintfulProduct[]> {
 }
 
 /**
- * Get products for UI with pagination and filtering
+ * Get products for UI with pagination, filtering, searching and sorting
+ * FULL DATABASE IMPLEMENTATION (No client-side slicing/sorting for main logic)
  */
-export async function getProductsForUI(page = 1, limit = 20, categoryFilter?: string | number) {
+export async function getProductsForUI(
+    page = 1,
+    limit = 20,
+    categoryFilter?: string | number,
+    sortOption: string = 'newest',
+    searchQuery?: string
+) {
     if (!db) return { products: [], total: 0 };
 
     const offset = (page - 1) * limit;
+    let allCategoryIds: number[] = [];
 
+    // 1. Resolve Category Filters (Recursive)
     if (categoryFilter) {
-        // Find category by ID (number) or Name (string)
         const isId = !isNaN(Number(categoryFilter));
-
         const dbCategory = await db
             .select()
             .from(categories)
@@ -316,10 +323,8 @@ export async function getProductsForUI(page = 1, limit = 20, categoryFilter?: st
             .limit(1);
 
         if (dbCategory.length > 0) {
-            // Get all sub-category IDs recursively
-            const allCategoryIds = [dbCategory[0].id];
+            allCategoryIds = [dbCategory[0].id];
 
-            // Helper function to get children
             const getChildren = async (parentIds: number[]) => {
                 const children = await db
                     .select({ id: categories.id, printfulId: categories.printfulId })
@@ -329,8 +334,6 @@ export async function getProductsForUI(page = 1, limit = 20, categoryFilter?: st
                 if (children.length > 0) {
                     const childIds = children.map(c => c.id);
                     const childPrintfulIds = children.map(c => c.printfulId);
-
-                    // Filter out IDs already in the list to avoid infinite loops if data is corrupt
                     const newChildIds = childIds.filter(id => !allCategoryIds.includes(id));
                     if (newChildIds.length > 0) {
                         allCategoryIds.push(...newChildIds);
@@ -338,67 +341,104 @@ export async function getProductsForUI(page = 1, limit = 20, categoryFilter?: st
                     }
                 }
             };
-
-            // Start recursive search for sub-categories
-            // Note: targetCat.parent_id in DB corresponds to Printful category ID
             await getChildren([dbCategory[0].printfulId]);
-
-            const filteredProducts = await db
-                .select({ product: products })
-                .from(products)
-                .innerJoin(productCategories, eq(products.id, productCategories.productId))
-                .where(and(
-                    eq(products.isActive, true),
-                    inArray(productCategories.categoryId, allCategoryIds)
-                ))
-                .orderBy(desc(products.updatedAt), desc(products.id))
-                .limit(limit)
-                .offset(offset);
-
-            const [countResult] = await db
-                .select({ count: sql<number>`count(DISTINCT ${products.id})` })
-                .from(products)
-                .innerJoin(productCategories, eq(products.id, productCategories.productId))
-                .where(and(
-                    eq(products.isActive, true),
-                    inArray(productCategories.categoryId, allCategoryIds)
-                ));
-
-            const productsWithData = await Promise.all(filteredProducts.map(async ({ product: p }) => {
-                const [variantsData, catData] = await Promise.all([
-                    db.select().from(productVariants).where(eq(productVariants.productId, p.id)),
-                    db.select({ id: categories.printfulId, name: categories.name })
-                        .from(productCategories)
-                        .innerJoin(categories, eq(productCategories.categoryId, categories.id))
-                        .where(eq(productCategories.productId, p.id))
-                        .limit(1)
-                ]);
-
-                const variants = variantsData.map(mapDBVariantToPrintful);
-                const category = catData.length > 0 ? catData[0] : null;
-                return { ...p, id: p.printfulId, variants, category };
-            }));
-
-            return { products: productsWithData, total: Number(countResult.count) };
         } else {
             return { products: [], total: 0 };
         }
     }
 
-    const productsData = await db
-        .select()
-        .from(products)
-        .where(eq(products.isActive, true))
-        .orderBy(desc(products.updatedAt), desc(products.id))
+    // 2. Build Main Query with Group By for accurate Price Sort
+    // We select products.* and min_price
+    const baseQuery = db
+        .select({
+            id: products.id,
+            printfulId: products.printfulId,
+            name: products.name,
+            thumbnailUrl: products.thumbnailUrl,
+            description: products.description,
+            isActive: products.isActive,
+            updatedAt: products.updatedAt,
+            // Calculate min price for sorting
+            minPrice: sql<number>`MIN(CAST(${productVariants.retailPrice} AS DECIMAL))`
+        })
+        .from(products);
+
+    // Always join variants for price info/sorting
+    baseQuery.leftJoin(productVariants, eq(products.id, productVariants.productId));
+
+    // Join Categories if needed
+    if (allCategoryIds.length > 0) {
+        baseQuery.innerJoin(productCategories, eq(products.id, productCategories.productId));
+    }
+
+    // 3. Apply Conditions
+    const conditions = [eq(products.isActive, true)];
+
+    if (allCategoryIds.length > 0) {
+        conditions.push(inArray(productCategories.categoryId, allCategoryIds));
+    }
+
+    if (searchQuery) {
+        // Database-level Search
+        conditions.push(sql`lower(${products.name}) LIKE lower(${`%${searchQuery}%`})`);
+    }
+
+    // 4. Grouping & Sorting
+    baseQuery.groupBy(products.id);
+
+    const orderByClauses = [];
+    switch (sortOption) {
+        case 'price-asc':
+            // Sort by the aggregated min price calculated above
+            orderByClauses.push(sql`MIN(CAST(${productVariants.retailPrice} AS DECIMAL)) ASC`);
+            break;
+        case 'price-desc':
+            orderByClauses.push(sql`MAX(CAST(${productVariants.retailPrice} AS DECIMAL)) DESC`);
+            break;
+        case 'title-asc':
+            orderByClauses.push(asc(products.name));
+            break;
+        case 'title-desc':
+            orderByClauses.push(desc(products.name));
+            break;
+        case 'newest':
+        default:
+            orderByClauses.push(desc(products.updatedAt));
+            orderByClauses.push(desc(products.id));
+    }
+
+    // Execute Main Query (Paginated)
+    // @ts-ignore
+    if (orderByClauses.length > 0) baseQuery.orderBy(...orderByClauses);
+
+    const filteredProducts = await baseQuery
+        .where(and(...conditions))
         .limit(limit)
         .offset(offset);
 
-    const [totalCountResult] = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(products)
-        .where(eq(products.isActive, true));
+    // 5. Get Total Count (Separate Query for Pagination)
+    // Needs to mirror the joins/conditions of main query to be accurate
+    const countQuery = db
+        .select({ count: sql<number>`count(DISTINCT ${products.id})` })
+        .from(products);
 
-    const productsWithData = await Promise.all(productsData.map(async (p) => {
+    if (allCategoryIds.length > 0) {
+        countQuery.innerJoin(productCategories, eq(products.id, productCategories.productId));
+    }
+
+    if (searchQuery || allCategoryIds.length > 0) {
+        countQuery.where(and(...conditions));
+    } else {
+        countQuery.where(eq(products.isActive, true));
+    }
+
+    const [countResult] = await countQuery;
+
+
+    // 6. Hydrate results with full variants data
+    // Converting the raw query result back to expected Full Product structure
+    const productsWithData = await Promise.all(filteredProducts.map(async (p) => {
+        // Fetch full variant details for the UI
         const [variantsData, catData] = await Promise.all([
             db.select().from(productVariants).where(eq(productVariants.productId, p.id)),
             db.select({ id: categories.printfulId, name: categories.name })
@@ -410,10 +450,19 @@ export async function getProductsForUI(page = 1, limit = 20, categoryFilter?: st
 
         const variants = variantsData.map(mapDBVariantToPrintful);
         const category = catData.length > 0 ? catData[0] : null;
-        return { ...p, id: p.printfulId, variants, category };
+
+        // Reconstruct PrintfulProduct object
+        return {
+            ...p,
+            id: p.printfulId, // Map back to printful ID for UI compatibility
+            variants,
+            category,
+            // Ensure thumbnail exists
+            thumbnail_url: p.thumbnailUrl || (variants[0] as any)?.preview_url
+        };
     }));
 
-    return { products: productsWithData, total: Number(totalCountResult.count) };
+    return { products: productsWithData, total: Number(countResult?.count || 0) };
 }
 
 /**

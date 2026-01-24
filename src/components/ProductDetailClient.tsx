@@ -5,6 +5,7 @@ import useWishlistDispatch from "../hooks/useWishlistDispatch";
 import useWishlistState from "../hooks/useWishlistState";
 import { PrintfulProduct } from "../types";
 import { trackEvent } from "./GoogleAnalytics";
+import ShippingEstimator from "./ShippingEstimator";
 
 export default function ProductDetailClient({ product }: { product: PrintfulProduct }) {
     const wishlistDispatch = useWishlistDispatch();
@@ -284,6 +285,7 @@ export default function ProductDetailClient({ product }: { product: PrintfulProd
                     )}
                 </div>
             )}
+            <ShippingEstimator variantId={activeVariantExternalId} />
 
             {/* Add to Cart Button */}
             <div className="space-y-3">
@@ -392,6 +394,8 @@ export default function ProductDetailClient({ product }: { product: PrintfulProd
                     Secure payment processing
                 </div>
             </div>
+
+
 
             {/* Description */}
             {product.description && (

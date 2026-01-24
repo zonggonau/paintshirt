@@ -41,12 +41,22 @@ async function getCategories(): Promise<Record<number, string>> {
     }
 }
 
-async function getProducts(page: number = 1, limit: number = 20, categoryName?: string): Promise<{ products: any[]; total: number; error?: string }> {
+async function getProducts(
+    page: number = 1,
+    limit: number = 20,
+    filter?: { category?: string, sort?: string, search?: string }
+): Promise<{ products: any[]; total: number; error?: string }> {
     try {
-        const { products, total } = await getProductsForUI(page, limit, categoryName);
+        const { products, total } = await getProductsForUI(
+            page,
+            limit,
+            filter?.category,
+            filter?.sort,
+            filter?.search
+        );
 
-        // Format variant names for consistency if needed, though they should be stored formatted or handled in UI
-        const formattedProducts = products.map(p => ({
+        // Format variant names for consistency if needed
+        const formattedProducts = products.map((p: any) => ({
             ...p,
             variants: p.variants.map((v: any) => ({
                 ...v,
@@ -78,13 +88,23 @@ export default async function ProductsPage({
     const resolvedSearchParams = await searchParams;
     const page = typeof resolvedSearchParams.page === 'string' ? parseInt(resolvedSearchParams.page) : 1;
     const categoryName = typeof resolvedSearchParams.category === 'string' ? resolvedSearchParams.category : undefined;
+    const sort = typeof resolvedSearchParams.sort === 'string' ? resolvedSearchParams.sort : 'newest';
+    const search = typeof resolvedSearchParams.search === 'string' ? resolvedSearchParams.search : undefined;
+
+    // Also support 'q' for search standard
+    const query = search || (typeof resolvedSearchParams.q === 'string' ? resolvedSearchParams.q : undefined);
+
     const limit = 20;
 
     // Fetch categories first to get the ID map
     const categoryMap = await getCategories();
 
-    // Fetch products with optional category filter
-    const { products, total, error } = await getProducts(page, limit, categoryName);
+    // Fetch products with all filters
+    const { products, total, error } = await getProducts(page, limit, {
+        category: categoryName,
+        sort,
+        search: query
+    });
 
     return (
         <div className="bg-gray-50 min-h-screen py-12">
