@@ -3,13 +3,6 @@ import Credentials from "next-auth/providers/credentials";
 
 export const authConfig = {
     trustHost: true,
-    providers: [
-        Credentials({
-            // Providers will be handled in auth.ts because they need DB access
-            // but we need to declare them here for middleware compatibility if needed
-            // or just leave them empty if we handle everything in auth.ts
-        }),
-    ],
     pages: {
         signIn: "/login",
     },
@@ -25,4 +18,5 @@ export const authConfig = {
             return true;
         },
     },
+    providers: [], // Providers defined in auth.ts
 } satisfies NextAuthConfig;

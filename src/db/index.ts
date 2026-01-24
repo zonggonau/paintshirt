@@ -2,15 +2,17 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
 
-// Database connection URL from environment variable
 // Use a dummy URL during build if not provided to prevent Drizzle initialization errors
-const connectionString = process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/postgres";
+// If in Docker, use 'postgres' as host, otherwise 'localhost'
+const isDocker = process.env.DATABASE_URL?.includes("postgres:5432");
+const dummyHost = isDocker ? "postgres" : "localhost";
+const connectionString = process.env.DATABASE_URL || `postgresql://postgres:postgres@${dummyHost}:5432/postgres`;
 
 if (!process.env.DATABASE_URL) {
     if (process.env.NODE_ENV === "production") {
-        console.warn("WARNING: DATABASE_URL is not defined in production. Application will fail.");
+        console.error("CRITICAL: DATABASE_URL is not defined in production environment.");
     } else {
-        console.warn("WARNING: DATABASE_URL is not defined. Using dummy URL for build/dev consistency.");
+        console.warn(`[DB] Database URL missing. Using dummy connection on ${dummyHost}.`);
     }
 }
 
