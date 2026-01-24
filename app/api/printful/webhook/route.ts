@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
                         await deleteProductByPrintfulId(printfulId);
                     } else {
                         console.log(`[Webhook] Syncing product ${printfulId} (Trigger: ${type})...`);
-                        await syncProductById(printfulId, "webhook");
+                        await syncProductById(printfulId);
                     }
                 }
                 break;

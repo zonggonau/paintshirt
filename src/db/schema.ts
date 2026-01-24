@@ -30,6 +30,7 @@ export const products = pgTable("products", {
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
 // ===============================================
 // Product Variants Table
 // Stores product variants (size, color, price)
@@ -54,21 +55,6 @@ export const productVariants = pgTable("product_variants", {
     inStock: boolean("in_stock").default(true),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-// ===============================================
-// Sync Logs Table
-// Tracks product synchronization history
-// ===============================================
-export const syncLogs = pgTable("sync_logs", {
-    id: serial("id").primaryKey(),
-    type: varchar("type", { length: 50 }).notNull(), // 'manual' | 'webhook' | 'scheduled'
-    status: varchar("status", { length: 50 }).notNull(), // 'pending' | 'success' | 'failed'
-    productsAdded: integer("products_added").default(0),
-    productsUpdated: integer("products_updated").default(0),
-    errorMessage: text("error_message"),
-    startedAt: timestamp("started_at").defaultNow().notNull(),
-    completedAt: timestamp("completed_at"),
 });
 
 // ===============================================
@@ -141,5 +127,3 @@ export type ProductVariant = typeof productVariants.$inferSelect;
 export type NewProductVariant = typeof productVariants.$inferInsert;
 export type Category = typeof categories.$inferSelect;
 export type NewCategory = typeof categories.$inferInsert;
-export type SyncLog = typeof syncLogs.$inferSelect;
-export type NewSyncLog = typeof syncLogs.$inferInsert;

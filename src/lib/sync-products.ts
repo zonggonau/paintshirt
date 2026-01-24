@@ -1,4 +1,4 @@
-import { db, products, productVariants, syncLogs, categories, productCategories } from "@/src/db";
+import { db, products, productVariants, categories, productCategories } from "@/src/db";
 import { printful } from "./printful-client";
 import { eq, and, sql, desc, inArray } from "drizzle-orm";
 import { PrintfulProduct, PrintfulCategory } from "../types";
@@ -158,9 +158,7 @@ export async function syncCategories(): Promise<{ added: number; updated: number
 /**
  * Fetch all products from Printful and sync to database
  */
-export async function syncProducts(
-    type: "manual" | "webhook" | "scheduled" = "manual"
-): Promise<SyncResult> {
+export async function syncProducts(): Promise<SyncResult> {
     if (!db) {
         return {
             success: false,
@@ -171,15 +169,6 @@ export async function syncProducts(
         };
     }
 
-    // Create sync log entry
-    const [syncLog] = await db
-        .insert(syncLogs)
-        .values({
-            type,
-            status: "pending",
-            startedAt: new Date(),
-        })
-        .returning();
 
     let productsAdded = 0;
     let productsUpdated = 0;
@@ -221,16 +210,6 @@ export async function syncProducts(
             }
         }
 
-        // Update sync log with success
-        await db
-            .update(syncLogs)
-            .set({
-                status: "success",
-                productsAdded,
-                productsUpdated,
-                completedAt: new Date(),
-            })
-            .where(eq(syncLogs.id, syncLog.id));
 
         return {
             success: true,
@@ -242,15 +221,6 @@ export async function syncProducts(
         const errorMessage =
             error instanceof Error ? error.message : "Unknown error";
 
-        // Update sync log with failure
-        await db
-            .update(syncLogs)
-            .set({
-                status: "failed",
-                errorMessage,
-                completedAt: new Date(),
-            })
-            .where(eq(syncLogs.id, syncLog.id));
 
         return {
             success: false,
@@ -262,16 +232,6 @@ export async function syncProducts(
     }
 }
 
-/**
- * Get the latest sync logs
- */
-export async function getSyncLogs(limit = 10) {
-    if (!db) {
-        return [];
-    }
-
-    return db.select().from(syncLogs).orderBy(desc(syncLogs.startedAt), desc(syncLogs.id)).limit(limit);
-}
 
 /**
  * Get all synced products from database
@@ -540,32 +500,12 @@ export async function getBrandsFromDB(): Promise<any[]> {
  * Sync a single product by its Printful ID
  */
 export async function syncProductById(
-    printfulProductId: number | string,
-    type: "manual" | "webhook" = "manual"
+    printfulProductId: number | string
 ): Promise<SyncResult> {
     if (!db) return { success: false, productsAdded: 0, productsUpdated: 0, totalProducts: 0, error: "Database not available" };
 
-    const [syncLog] = await db
-        .insert(syncLogs)
-        .values({
-            type,
-            status: "pending",
-            startedAt: new Date(),
-        })
-        .returning();
-
     try {
         const { added, updated } = await syncSingleProductDetail(Number(printfulProductId));
-
-        await db
-            .update(syncLogs)
-            .set({
-                status: "success",
-                productsAdded: added,
-                productsUpdated: updated,
-                completedAt: new Date(),
-            })
-            .where(eq(syncLogs.id, syncLog.id));
 
         return {
             success: true,
@@ -575,15 +515,6 @@ export async function syncProductById(
         };
     } catch (e) {
         const error = e instanceof Error ? e.message : "Unknown error";
-        await db
-            .update(syncLogs)
-            .set({
-                status: "failed",
-                errorMessage: error,
-                completedAt: new Date(),
-            })
-            .where(eq(syncLogs.id, syncLog.id));
-
         return {
             success: false,
             productsAdded: 0,
