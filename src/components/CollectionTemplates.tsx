@@ -199,3 +199,116 @@ export function CollectionSixGrid({ title, products, categorySlug }: CollectionT
         </div>
     );
 }
+/**
+ * Rich Grid Layout: Full details with description
+ * Mimics "Card with full details" style
+ */
+export function CollectionRichGrid({ title, products, categorySlug }: CollectionTemplateProps) {
+    if (products.length === 0) return null;
+    const displayProducts = products.slice(0, 4); // Show 4 items for this layout
+
+    return (
+        <div className="mb-24">
+            <div className="flex justify-between items-end mb-8">
+                <h3 className="text-2xl font-bold text-gray-900">{title}</h3>
+                <Link href={`/products?category=${encodeURIComponent(categorySlug)}`} className="text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                    Browse all &rarr;
+                </Link>
+            </div>
+            <div className="grid grid-cols-1 gap-y-10 gap-x-6 sm:grid-cols-2 lg:grid-cols-4 xl:gap-x-8">
+                {displayProducts.map((product) => {
+                    const price = product.variants?.[0]?.retail_price || 0;
+                    const currency = product.variants?.[0]?.currency || 'USD';
+                    const image = product.variants?.[0]?.files?.find((f: any) => f.type === 'preview')?.preview_url || product.variants?.[0]?.preview_url || product.thumbnail_url;
+
+                    // Simple logic to determine "colors" count based on variants
+                    const colorCount = new Set(product.variants.map((v: any) => v.color)).size;
+
+                    return (
+                        <div key={product.id} className="group relative">
+                            <div className="aspect-[1/1] w-full overflow-hidden rounded-md bg-gray-200 lg:aspect-none group-hover:opacity-75 lg:h-80 relative">
+                                {image ? (
+                                    <img
+                                        src={image}
+                                        alt={product.name}
+                                        className="h-full w-full object-cover object-center lg:h-full lg:w-full"
+                                    />
+                                ) : (
+                                    <div className="flex h-full items-center justify-center text-gray-400">No Image</div>
+                                )}
+                            </div>
+                            <div className="mt-4 flex justify-between">
+                                <div>
+                                    <h3 className="text-sm font-medium text-gray-700">
+                                        <Link href={getProductUrl(product)}>
+                                            <span aria-hidden="true" className="absolute inset-0" />
+                                            {product.name}
+                                        </Link>
+                                    </h3>
+                                    <p className="mt-1 text-sm text-gray-500">{colorCount > 1 ? `${colorCount} colors` : 'Single color'}</p>
+                                </div>
+                                <p className="text-sm font-medium text-gray-900">{formatPrice(price, currency)}</p>
+                            </div>
+                            {/* Optional: Add to cart button overlay on desktop could go here */}
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
+/**
+ * Border Grid Layout
+ * Clean grid with borders separating items
+ */
+export function CollectionBorderGrid({ title, products, categorySlug }: CollectionTemplateProps) {
+    if (products.length === 0) return null;
+    const displayProducts = products.slice(0, 8); // Allows up to 8 items
+
+    return (
+        <div className="mb-20 border-t border-gray-200">
+            <div className="py-8 text-center">
+                <h3 className="text-xl font-bold text-gray-900">{title}</h3>
+                <Link href={`/products?category=${encodeURIComponent(categorySlug)}`} className="mt-2 block text-sm text-gray-500 hover:text-gray-900">
+                    See everything in this collection
+                </Link>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 border-l border-b border-gray-200">
+                {displayProducts.map((product) => {
+                    const price = product.variants?.[0]?.retail_price || 0;
+                    const currency = product.variants?.[0]?.currency || 'USD';
+                    const image = product.variants?.[0]?.files?.find((f: any) => f.type === 'preview')?.preview_url || product.thumbnail_url;
+
+                    return (
+                        <Link
+                            key={product.id}
+                            href={getProductUrl(product)}
+                            className="group relative border-r border-t border-gray-200 p-4 sm:p-6 hover:bg-gray-50 transition"
+                        >
+                            <div className="aspect-[1/1] overflow-hidden rounded-lg bg-gray-100 group-hover:opacity-75">
+                                {image && (
+                                    <img
+                                        src={image}
+                                        alt={product.name}
+                                        className="h-full w-full object-contain object-center"
+                                    />
+                                )}
+                            </div>
+                            <div className="pt-4 text-center">
+                                <h3 className="text-sm font-medium text-gray-900 line-clamp-1">{product.name}</h3>
+                                <div className="mt-2 flex flex-col items-center gap-1">
+                                    <p className="text-sm text-gray-500">{formatPrice(price, currency)}</p>
+                                    <div className="flex text-yellow-400 text-xs">
+                                        {[...Array(5)].map((_, i) => <span key={i}>★</span>)}
+                                    </div>
+                                </div>
+                            </div>
+                        </Link>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}

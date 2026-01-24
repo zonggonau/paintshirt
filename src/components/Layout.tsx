@@ -194,7 +194,7 @@ const Layout = ({ children, categories = [] }: { children: React.ReactNode, cate
                                 </button>
                             </div>
 
-                            <Link href="/products?page=1" className="text-sm font-medium text-gray-700 hover:text-indigo-600 transition">
+                            <Link href="/products" className="text-sm font-medium text-gray-700 hover:text-indigo-600 transition">
                                 ALL PRODUCTS
                             </Link>
                             <Link href="/about" className="text-sm font-medium text-gray-700 hover:text-indigo-600 transition">

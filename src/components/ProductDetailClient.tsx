@@ -144,33 +144,7 @@ export default function ProductDetailClient({ product }: { product: PrintfulProd
             <div>
                 <div className="flex items-start justify-between mb-2">
                     <h1 className="text-2xl lg:text-4xl font-bold text-gray-900">{name}</h1>
-                    <button
-                        onClick={addToWishlist}
-                        className="p-3 rounded-full bg-gray-100 hover:bg-pink-50 transition group"
-                        aria-label="Add to wishlist"
-                    >
-                        {onWishlist ? (
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 24 24"
-                                className="w-6 h-6 text-pink-500"
-                                fill="currentColor"
-                            >
-                                <path d="M12.001 4.529c2.349-2.109 5.979-2.039 8.242.228 2.262 2.268 2.34 5.88.236 8.236l-8.48 8.492-8.478-8.492c-2.104-2.356-2.025-5.974.236-8.236 2.265-2.264 5.888-2.34 8.244-.228z" />
-                            </svg>
-                        ) : (
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 24 24"
-                                className="w-6 h-6 text-gray-600 group-hover:text-pink-500 transition"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                            >
-                                <path d="M12.001 4.529c2.349-2.109 5.979-2.039 8.242.228 2.262 2.268 2.34 5.88.236 8.236l-8.48 8.492-8.478-8.492c-2.104-2.356-2.025-5.974.236-8.236 2.265-2.264 5.888-2.34 8.244-.228z" />
-                            </svg>
-                        )}
-                    </button>
+
                     <button
                         onClick={() => {
                             if (navigator.share) {
@@ -382,13 +356,6 @@ export default function ProductDetailClient({ product }: { product: PrintfulProd
                             </svg>
                         </div>
 
-                        {/* American Express */}
-                        <div className="bg-white border border-gray-200 rounded-lg px-3 py-2 hover:border-gray-300 transition">
-                            <svg className="h-6 w-auto" viewBox="0 0 48 16" fill="none">
-                                <rect width="48" height="16" rx="2" fill="#006FCF" />
-                                <text x="24" y="11" fontFamily="Arial" fontSize="8" fontWeight="bold" fill="white" textAnchor="middle">AMEX</text>
-                            </svg>
-                        </div>
 
                         {/* PayPal */}
                         <div className="bg-white border border-gray-200 rounded-lg px-3 py-2 hover:border-gray-300 transition">
@@ -399,23 +366,7 @@ export default function ProductDetailClient({ product }: { product: PrintfulProd
                             </svg>
                         </div>
 
-                        {/* Apple Pay */}
-                        <div className="bg-white border border-gray-200 rounded-lg px-3 py-2 hover:border-gray-300 transition">
-                            <svg className="h-6 w-auto" viewBox="0 0 48 16" fill="none">
-                                <path d="M9.5 2.8c.6-.7 1-1.7.9-2.7-.9 0-2 .6-2.6 1.4-.6.7-.9 1.6-.8 2.6 1 .1 2-.5 2.5-1.3zm.9 1.4c-1.4-.1-2.5.8-3.2.8-.6 0-1.7-.7-2.8-.7-1.4 0-2.7.8-3.5 2.1-1.5 2.6-.4 6.4 1.1 8.5.7 1 1.6 2.2 2.7 2.2 1.1 0 1.5-.7 2.8-.7s1.7.7 2.8.7c1.2 0 1.9-1.1 2.6-2.1.8-1.2 1.1-2.3 1.1-2.4 0 0-2.2-.8-2.2-3.3 0-2.1 1.7-3.1 1.8-3.2-1-1.5-2.6-1.7-3.2-1.9z" fill="black" />
-                                <text x="24" y="11" fontFamily="Arial" fontSize="7" fill="black">Pay</text>
-                            </svg>
-                        </div>
 
-                        {/* Google Pay */}
-                        <div className="bg-white border border-gray-200 rounded-lg px-3 py-2 hover:border-gray-300 transition">
-                            <svg className="h-6 w-auto" viewBox="0 0 48 16" fill="none">
-                                <path d="M23.7 8.5v4.7h-1.5V2h4c1 0 1.9.3 2.5.9.7.6 1 1.4 1 2.4s-.3 1.7-1 2.3c-.7.6-1.6.9-2.5.9h-2.5zm0-5.2v3.7h2.6c.6 0 1.1-.2 1.5-.6.4-.4.6-.9.6-1.5s-.2-1-.6-1.4c-.4-.4-.9-.6-1.5-.6h-2.6z" fill="#5F6368" />
-                                <path d="M33.8 7.3c1.1 0 2 .3 2.6.9.6.6.9 1.4.9 2.5v4.5h-1.4v-1h-.1c-.6.8-1.3 1.2-2.3 1.2-1 0-1.8-.3-2.3-.8-.6-.5-.8-1.2-.8-1.9 0-.8.3-1.5.9-2 .6-.5 1.4-.7 2.4-.7.8 0 1.5.1 2 .4v-.3c0-.5-.2-1-.6-1.3-.4-.3-.9-.5-1.4-.5-.8 0-1.5.3-1.9 1l-1.3-.8c.7-1 1.8-1.5 3.3-1.5zm-1.7 5.5c0 .4.2.7.5.9.3.2.7.4 1.1.4.6 0 1.2-.2 1.7-.7.5-.4.8-1 .8-1.6-.4-.3-1.1-.5-1.9-.5-.6 0-1.1.1-1.5.4-.4.3-.7.6-.7 1.1z" fill="#5F6368" />
-                                <path d="M45.7 7.5l-5.3 12.3h-1.5l2-4.3-3.5-8h1.6l2.6 6.2h0l2.5-6.2h1.6z" fill="#5F6368" />
-                                <path d="M15.3 8c-.2.2-.3.5-.3.8s.1.6.3.8c.2.2.5.3.8.3.3 0 .6-.1.8-.3.2-.2.3-.5.3-.8s-.1-.6-.3-.8c-.2-.2-.5-.3-.8-.3-.3 0-.6.1-.8.3z" fill="#4285F4" />
-                            </svg>
-                        </div>
                     </div>
                 </div>
             </div>

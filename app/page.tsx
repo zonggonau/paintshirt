@@ -5,9 +5,16 @@ import { formatVariantName } from "../src/lib/format-variant-name";
 import { db, products as productsTable, productVariants, productCategories, categories as categoriesTable } from "../src/db";
 import { eq, and } from "drizzle-orm";
 import BrandsSection from "../src/components/BrandsSection";
-import { CollectionTwoGrid, CollectionThreeGrid, CollectionCarousel, CollectionSixGrid } from "../src/components/CollectionTemplates";
+import {
+  CollectionTwoGrid,
+  CollectionThreeGrid,
+  CollectionCarousel,
+  CollectionSixGrid,
+  CollectionRichGrid,
+  CollectionBorderGrid
+} from "../src/components/CollectionTemplates";
 import Link from "next/link";
-
+import Testimonials from "../src/components/home/Testimonials";
 
 async function getProducts(): Promise<{ products: any[]; error?: string }> {
   try {
@@ -52,15 +59,18 @@ async function getCollectionsWithProducts(): Promise<{
       })
       .from(categoriesTable)
       .innerJoin(productCategories, eq(categoriesTable.id, productCategories.categoryId))
-      .limit(4);
+      .limit(8); // Fetch more for variety
 
     if (categoriesWithProducts.length === 0) {
       return { collections: [] };
     }
 
+    // Randomize category order in JS
+    const shuffledCategories = categoriesWithProducts.sort(() => 0.5 - Math.random());
+
     const collections = await Promise.all(
-      categoriesWithProducts.map(async (collection) => {
-        // 2. Fetch up to 6 products for this specific category
+      shuffledCategories.map(async (collection) => {
+        // 2. Fetch up to 8 products for this specific category (needed for larger grids)
         const productLinks = await db
           .select({ product: productsTable })
           .from(productsTable)
@@ -69,9 +79,12 @@ async function getCollectionsWithProducts(): Promise<{
             eq(productCategories.categoryId, collection.id),
             eq(productsTable.isActive, true)
           ))
-          .limit(6);
+          .limit(8);
 
-        const products = await Promise.all(productLinks.map(async ({ product: p }) => {
+        // Shuffle products
+        const shuffledProducts = productLinks.sort(() => 0.5 - Math.random());
+
+        const products = await Promise.all(shuffledProducts.map(async ({ product: p }) => {
           const variantsData = await db.select().from(productVariants).where(eq(productVariants.productId, p.id));
           const variants = variantsData.map(mapDBVariantToPrintful);
           return {
@@ -176,28 +189,12 @@ export default async function Home() {
               </div>
             </>
           )}
-
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-8 mt-16 max-w-2xl mx-auto">
-            <div className="text-center">
-              <div className="text-3xl md:text-4xl font-bold text-white mb-2">100+</div>
-              <div className="text-sm md:text-base text-white/80">Products</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl md:text-4xl font-bold text-white mb-2">24/7</div>
-              <div className="text-sm md:text-base text-white/80">Support</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl md:text-4xl font-bold text-white mb-2">★ 4.9</div>
-              <div className="text-sm md:text-base text-white/80">Rating</div>
-            </div>
-          </div>
         </div>
       </section>
 
       {/* Collections Section with Varied Templates */}
       {collections.length > 0 && (
-        <section className="py-12 md:py-20 bg-white">
+        <section className="py-12 md:py-20 bg-white" id="products">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             {/* Section Header */}
             <div className="text-center mb-16">
@@ -209,7 +206,6 @@ export default async function Home() {
               </p>
             </div>
 
-            {/* Collections Error */}
             {collectionsError && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-8 max-w-2xl mx-auto">
                 <p className="text-yellow-700 text-center">{collectionsError}</p>
@@ -218,8 +214,8 @@ export default async function Home() {
 
             {/* Render Each Collection with Rotated Templates */}
             {collections.map((collection, index) => {
-              // Rotation Pattern: TwoGrid -> SixGrid -> Carousel -> ThreeGrid
-              const patternIndex = index % 4;
+              // Rotation Pattern: RichGrid -> BorderGrid -> Carousel -> ThreeGrid -> SixGrid
+              const patternIndex = index % 5;
               const props = {
                 title: collection.category.title,
                 products: collection.products,
@@ -229,15 +225,17 @@ export default async function Home() {
 
               switch (patternIndex) {
                 case 0:
-                  return <CollectionTwoGrid key={key} {...props} />;
+                  return <CollectionRichGrid key={key} {...props} />;
                 case 1:
-                  return <CollectionSixGrid key={key} {...props} />;
+                  return <CollectionBorderGrid key={key} {...props} />;
                 case 2:
                   return <CollectionCarousel key={key} {...props} />;
                 case 3:
                   return <CollectionThreeGrid key={key} {...props} />;
+                case 4:
+                  return <CollectionSixGrid key={key} {...props} />;
                 default:
-                  return <CollectionThreeGrid key={key} {...props} />;
+                  return <CollectionRichGrid key={key} {...props} />;
               }
             })}
           </div>
@@ -292,6 +290,8 @@ export default async function Home() {
           </div>
         </div>
       </section>
+
+      <Testimonials />
     </>
   );
 }

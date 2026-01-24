@@ -8,10 +8,29 @@ import { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-    title: 'All Products | PrintfulTshirt',
-    description: 'Browse our complete collection of premium print-on-demand products.',
-};
+type Props = {
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}
+
+export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
+    const sp = await searchParams;
+    const page = typeof sp.page === 'string' ? parseInt(sp.page) : 1;
+
+    // Base URL should ideally come from env, fallback to localhost for dev
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+
+    // SEO Optimization:
+    // If page is 1, canonical should be /products (clean URL) to avoid duplicate content with /products?page=1
+    const canonicalPath = page > 1 ? `/products?page=${page}` : '/products';
+
+    return {
+        title: `All Products ${page > 1 ? `- Page ${page}` : ''} | TEE-SOCIETY`,
+        description: 'Browse our complete collection of premium print-on-demand products.',
+        alternates: {
+            canonical: `${baseUrl}${canonicalPath}`,
+        },
+    };
+}
 
 async function getCategories(): Promise<Record<number, string>> {
     try {

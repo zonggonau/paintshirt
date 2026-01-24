@@ -72,9 +72,35 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         const product = await getProductFromDB(productId);
         if (!product) return { title: "Product Not Found" };
 
+        const title = `${product.name} | TEE-SOCIETY`;
+        // Strip HTML tags from description for metadata
+        const description = product.description?.replace(/<[^>]*>?/gm, '').substring(0, 160) || `Buy ${product.name} at TEE-SOCIETY.`;
+
+        // Find best image for OG
+        let imageUrl = product.thumbnail_url;
+        if (!imageUrl && product.variants && product.variants.length > 0) {
+            const firstVariant = product.variants[0];
+            // Need to handle potential inconsistent data structure
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            imageUrl = (firstVariant as any).files?.find((f: any) => f.type === 'preview')?.preview_url || (firstVariant as any).preview_url;
+        }
+
         return {
-            title: `${product.name} | PrintfulTshirt`,
-            description: product.description?.substring(0, 160) || `Buy ${product.name} at PrintfulTshirt.`
+            title,
+            description,
+            openGraph: {
+                title,
+                description,
+                images: imageUrl ? [{ url: imageUrl, width: 800, height: 800, alt: product.name }] : [],
+                url: `/products/categories/${slugs.join('/')}`,
+                type: 'website',
+            },
+            twitter: {
+                card: 'summary_large_image',
+                title,
+                description,
+                images: imageUrl ? [imageUrl] : [],
+            }
         };
     }
 
