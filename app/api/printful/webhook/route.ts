@@ -9,7 +9,21 @@ import { syncProductById, deleteProductByPrintfulId, updateVariantStock } from "
  */
 export async function POST(req: NextRequest) {
     try {
-        const body = await req.json();
+        // Robust JSON parsing for simulators
+        const rawBody = await req.text();
+        if (!rawBody) {
+            console.log("[Printful Webhook] Received empty body (possibly a ping/simulator check).");
+            return NextResponse.json({ success: true, message: "Ping received" });
+        }
+
+        let body;
+        try {
+            body = JSON.parse(rawBody);
+        } catch (parseErr) {
+            console.warn("[Printful Webhook] Failed to parse JSON body:", rawBody.substring(0, 100));
+            return NextResponse.json({ success: true, message: "Invalid JSON but acknowledged" });
+        }
+
         const { type, data } = body;
 
         console.log(`[Printful Webhook] Received event: ${type}`);
@@ -19,13 +33,20 @@ export async function POST(req: NextRequest) {
             case "product_updated":
                 // data.sync_product.id contains the Printful ID
                 if (data?.sync_product?.id) {
-                    console.log(`[Webhook] Syncing product ${data.sync_product.id}...`);
-                    await syncProductById(data.sync_product.id, "webhook");
+                    const printfulId = data.sync_product.id;
+                    const isIgnored = data.sync_product.is_ignored === true;
+
+                    if (isIgnored) {
+                        console.log(`[Webhook] Product ${printfulId} is ignored on Printful. Deactivating...`);
+                        await deleteProductByPrintfulId(printfulId);
+                    } else {
+                        console.log(`[Webhook] Syncing product ${printfulId} (Trigger: ${type})...`);
+                        await syncProductById(printfulId, "webhook");
+                    }
                 }
                 break;
 
             case "product_deleted":
-                // data.sync_product.id contains the deleted Printful ID
                 if (data?.sync_product?.id) {
                     console.log(`[Webhook] Deleting product ${data.sync_product.id}...`);
                     await deleteProductByPrintfulId(data.sync_product.id);
@@ -33,7 +54,6 @@ export async function POST(req: NextRequest) {
                 break;
 
             case "stock_updated":
-                // data.sync_variant_id and data.in_stock
                 if (data?.sync_variant_id !== undefined) {
                     console.log(`[Webhook] Updating stock for variant ${data.sync_variant_id}: ${data.in_stock}`);
                     await updateVariantStock(data.sync_variant_id, data.in_stock);
