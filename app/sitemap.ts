@@ -1,7 +1,6 @@
 import { MetadataRoute } from 'next';
-import { printful, fetchWithRetry } from '../src/lib/printful-client';
+import { getProductsFromDB } from '../src/lib/sync-products';
 import { slugify } from '../src/lib/slugify';
-import { formatVariantName } from '../src/lib/format-variant-name';
 import { PrintfulProduct } from '../src/types';
 
 // Base URL website Anda - ganti jika menggunakan domain lain
@@ -9,33 +8,9 @@ const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://printfultshirt.com
 
 async function getProducts(): Promise<PrintfulProduct[]> {
     try {
-        // Fetch product IDs
-        const productIdsResponse = await fetchWithRetry<any>(
-            () => printful.get("sync/products")
-        );
-        const productIds = productIdsResponse.result;
-
-        // Fetch all products
-        const allProducts = await Promise.all(
-            productIds.map(async ({ id }: any) =>
-                await fetchWithRetry<any>(() => printful.get(`sync/products/${id}`))
-            )
-        );
-
-        return allProducts.map(
-            (response: any) => {
-                const { sync_product, sync_variants } = response.result;
-                return {
-                    ...sync_product,
-                    variants: sync_variants.map(({ name, ...variant }: any) => ({
-                        name: formatVariantName(name),
-                        ...variant,
-                    })),
-                };
-            }
-        );
+        return await getProductsFromDB();
     } catch (error) {
-        console.error("Error fetching products for sitemap:", error);
+        console.error("Error fetching products for sitemap from DB:", error);
         return [];
     }
 }

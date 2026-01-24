@@ -1,4 +1,5 @@
-import { printful } from "../../../../src/lib/printful-client";
+import { db, productVariants } from "../../../../src/db";
+import { eq, or } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 type Data = {
@@ -18,12 +19,33 @@ export async function GET(
     const { id } = await params;
 
     try {
-        const { result } = await printful.get(`store/variants/@${id}`);
+        if (!db) throw new Error("Database not available");
+
+        // Try to find variant by externalId or printfulVariantId
+        const variantData = await db
+            .select()
+            .from(productVariants)
+            .where(or(
+                eq(productVariants.externalId, id),
+                eq(productVariants.printfulVariantId, id)
+            ))
+            .limit(1);
+
+        if (variantData.length === 0) {
+            return NextResponse.json(
+                {
+                    errors: [{ key: "not_found", message: "Product variant not found" }],
+                } as Error,
+                { status: 404 }
+            );
+        }
+
+        const variant = variantData[0];
 
         return NextResponse.json(
             {
-                id: id as string,
-                price: result.retail_price,
+                id: id,
+                price: Number(variant.retailPrice),
                 url: `/api/products/${id}`,
             } as Data,
             {
@@ -33,7 +55,7 @@ export async function GET(
             }
         );
     } catch (error: any) {
-        console.log(error);
+        console.error("[API Products] Error:", error);
         return NextResponse.json(
             {
                 errors: [
@@ -43,7 +65,7 @@ export async function GET(
                     },
                 ],
             } as Error,
-            { status: 404 }
+            { status: 500 }
         );
     }
 }
