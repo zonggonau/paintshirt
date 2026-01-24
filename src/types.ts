@@ -110,6 +110,7 @@ export interface PrintfulProduct {
     parent_id?: number;
     retail_price: number;
     currency: string;
+    preview_url?: string;
     files: Array<{
       type: string;
       preview_url: string;

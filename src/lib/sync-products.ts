@@ -64,6 +64,7 @@ export function mapDBVariantToPrintful(v: any) {
         color: v.color || undefined,
         retail_price: Number(v.retailPrice),
         currency: v.currency || "USD",
+        preview_url: v.previewUrl || undefined,
         files: Array.isArray(v.files) ? v.files : [],
         options: Array.isArray(v.options) ? v.options : [],
         in_stock: v.inStock ?? true,
@@ -72,22 +73,33 @@ export function mapDBVariantToPrintful(v: any) {
 
 /**
  * Parse size and color from variant name if options are missing
+ * Examples: 
+ * - "T-Shirt / Black / XL" -> { color: "Black", size: "XL" }
+ * - "Mug / Black / 11oz" -> { color: "Black", size: "11oz" }
+ * - "Hat / Red" -> { color: "Red", size: null }
  */
 function parseSizeAndColor(name: string) {
     const parts = name.split(' / ');
+
+    // 3+ parts: usually [Product, Color, Size]
     if (parts.length >= 3) {
         return {
-            color: parts[parts.length - 2].trim(),
+            color: parts[1].trim(),
             size: parts[parts.length - 1].trim()
         };
-    } else if (parts.length === 2) {
-        const commonSizes = ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', 'XS', '2XS', 'One size'];
+    }
+
+    // 2 parts: [Product, Color/Size]
+    if (parts.length === 2) {
         const val = parts[1].trim();
-        if (commonSizes.some(s => val.includes(s))) {
+        const commonSizes = ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', 'XS', '2XS', 'One size', 'oz', '"'];
+
+        if (commonSizes.some(s => val.includes(s)) || /\d/.test(val)) {
             return { color: null, size: val };
         }
         return { color: val, size: null };
     }
+
     return { color: null, size: null };
 }
 
@@ -193,29 +205,7 @@ export async function syncProducts(
             }
 
             for (const syncProduct of syncProductsList) {
-                // [Optimization] Check if we can skip syncing this product
-                const existing = await db
-                    .select({
-                        id: products.id,
-                        variantsCount: sql<number>`count(DISTINCT ${productVariants.id})`,
-                        categoriesCount: sql<number>`count(DISTINCT ${productCategories.categoryId})`
-                    })
-                    .from(products)
-                    .leftJoin(productVariants, eq(products.id, productVariants.productId))
-                    .leftJoin(productCategories, eq(products.id, productCategories.productId))
-                    .where(eq(products.printfulId, String(syncProduct.id)))
-                    .groupBy(products.id)
-                    .limit(1);
-
-                // If product exists, variant count matches AND it has categories, we can skip
-                if (existing.length > 0 &&
-                    Number(existing[0].variantsCount) === syncProduct.variants &&
-                    Number(existing[0].categoriesCount) > 0) {
-                    console.log(`[Sync] Skipping product ${syncProduct.id} (Already up to date with categories)`);
-                    totalProducts++;
-                    continue;
-                }
-
+                // Force sync every product to ensure all data (color/size/etc) is captured
                 const { added, updated } = await syncSingleProductDetail(syncProduct.id);
                 productsAdded += added;
                 productsUpdated += updated;
@@ -683,6 +673,20 @@ async function syncSingleProductDetail(printfulProductId: number): Promise<{ add
             const parsed = parseSizeAndColor(variant.name);
             if (!vSize) vSize = parsed.size;
             if (!vColor) vColor = parsed.color;
+        }
+
+        // Final fallback: If still missing, try fetching the catalog-level variant info
+        if (!vSize || !vColor) {
+            try {
+                const catalogVariantRes = await printful.get(`variants/${variant.variant_id}`);
+                const cv = catalogVariantRes.result?.variant;
+                if (cv) {
+                    if (!vSize) vSize = cv.size || null;
+                    if (!vColor) vColor = cv.color || null;
+                }
+            } catch (e) {
+                console.warn(`[Sync] Failed to fetch catalog variant ${variant.variant_id} for extra metadata`);
+            }
         }
 
         const previewUrl =
