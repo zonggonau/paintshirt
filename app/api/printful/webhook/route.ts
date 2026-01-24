@@ -8,6 +8,16 @@ import { syncProductById, deleteProductByPrintfulId, updateVariantStock } from "
  * Documentation: https://developers.printful.com/docs/#section/Webhooks
  */
 export async function POST(req: NextRequest) {
+    // Optional Security: Check for secret in URL if configured
+    const { searchParams } = new URL(req.url);
+    const urlSecret = searchParams.get("secret");
+    const expectedSecret = process.env.SYNC_WEBHOOK_SECRET;
+
+    if (expectedSecret && urlSecret !== expectedSecret) {
+        console.warn("[Printful Webhook] Unauthorized access attempt with invalid secret.");
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     try {
         // Robust JSON parsing for simulators
         const rawBody = await req.text();

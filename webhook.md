@@ -1,269 +1,72 @@
-Package shipped Webhook
-Is called when a shipment with all or part of the ordered items is shipped.
+# 🔄 Cara Kerja Webhook Printful
 
-If the order is shipped in multiple shipments, this event will be called for every shipment sent.
+Webhook adalah cara bagi Printful untuk memberitahu website Anda secara otomatis jika terjadi perubahan data (seperti produk baru, stok habis, atau pesanan dikirim) tanpa Anda harus mengeceknya secara manual.
 
-If some items are reshipped, a shipping notification will be sent again for the same items.
+---
 
-Request Body schema: application/json
-Package shipped.
+## 🚀 Alur Kerja (End-to-End)
 
-type	
-string
-Event type
+### 1. Website Menyediakan Endpoint (Penerima)
+Website Anda telah memiliki "pintu masuk" khusus untuk menerima data dari Printful di URL:
+👉 `https://www.printfultshirt.com/api/printful/webhook?secret=TOKEN_ANDA`
 
-created	
-integer
-Event time
+*   **Method**: `POST`
+*   **Format Data**: `JSON`
+*   **Event Utama**: `product_synced`, `product_updated`, `stock_updated`
+*   **Lokasi Kode**: `app/api/printful/webhook/route.ts`
 
-retries	
-integer
-Number of previous attempts to deliver this webhook event
+### 2. Pendaftaran Webhook ke Printful
+Karena di dashboard Printful menu Webhook seringkali tersembunyi, Anda harus mendaftarkannya melalui API. Saya telah menyediakan script untuk ini:
+1. Jalankan `npx tsx scripts/setup-webhooks.ts` di komputer lokal.
+2. Script akan mengirim perintah ke Printful: *"Hey Printful, tolong kirim info ke URL saya jika ada perubahan produk/stok."*
 
-store	
-integer
-ID of the store that the event occured to
+### 3. Kejadian (Event) di Printful
+Setiap kali Anda:
+*   Menambahkan produk baru di Printful.
+*   Mengubah harga atau nama varian.
+*   Menghapus produk.
+*   Stok barang di gudang Printful habis.
 
-data	
-object (ShipmentInfo)
-Shipment and order data
-
-response 
+### 4. Printful Mengirim Payload
+Printful akan mengirimkan data JSON secara otomatis ke website Anda. Contoh data untuk produk baru:
+```json
 {
-  "type": "package_shipped",
-  "created": 1622456737,
-  "retries": 2,
-  "store": 12,
+  "type": "product_synced",
   "data": {
-    "shipment": {
-      "id": 10,
-      "carrier": "FEDEX",
-      "service": "FedEx SmartPost",
-      "tracking_number": 0,
-      "tracking_url": "https://www.fedex.com/fedextrack/?tracknumbers=0000000000",
-      "created": 1588716060,
-      "ship_date": "2020-05-05",
-      "shipped_at": 1588716060,
-      "reshipment": false,
-      "items": [
-        {
-          "item_id": 1,
-          "quantity": 1,
-          "picked": 1,
-          "printed": 1
-        }
-      ]
-    },
-    "order": {
-      "id": 13,
-      "external_id": "4235234213",
-      "store": 10,
-      "status": "draft",
-      "shipping": "STANDARD",
-      "shipping_service_name": "Flat Rate (3-4 business days after fulfillment)",
-      "created": 1602607640,
-      "updated": 1602607640,
-      "recipient": {
-        "name": "John Smith",
-        "company": "John Smith Inc",
-        "address1": "19749 Dearborn St",
-        "address2": "string",
-        "city": "Chatsworth",
-        "state_code": "CA",
-        "state_name": "California",
-        "country_code": "US",
-        "country_name": "United States",
-        "zip": "91311",
-        "phone": "2312322334",
-        "email": "firstname.secondname@domain.com",
-        "tax_number": "123.456.789-10"
-      },
-      "items": [
-        {
-          "id": 1,
-          "external_id": "item-1",
-          "variant_id": 1,
-          "sync_variant_id": 1,
-          "external_variant_id": "variant-1",
-          "warehouse_product_variant_id": 1,
-          "product_template_id": 1,
-          "quantity": 1,
-          "price": "13.00",
-          "retail_price": "13.00",
-          "name": "Enhanced Matte Paper Poster 18×24",
-          "product": {
-            "variant_id": 3001,
-            "product_id": 301,
-            "image": "https://files.cdn.printful.com/products/71/5309_1581412541.jpg",
-            "name": "Bella + Canvas 3001 Unisex Short Sleeve Jersey T-Shirt with Tear Away Label (White / 4XL)"
-          },
-          "files": [
-            {
-              "type": "default",
-              "id": 10,
-              "url": "​https://www.example.com/files/tshirts/example.png",
-              "options": [
-                {
-                  "id": "template_type",
-                  "value": "native"
-                }
-              ],
-              "hash": "ea44330b887dfec278dbc4626a759547",
-              "filename": "shirt1.png",
-              "mime_type": "image/png",
-              "size": 45582633,
-              "width": 1000,
-              "height": 1000,
-              "dpi": 300,
-              "status": "ok",
-              "created": 1590051937,
-              "thumbnail_url": "https://files.cdn.printful.com/files/ea4/ea44330b887dfec278dbc4626a759547_thumb.png",
-              "preview_url": "https://files.cdn.printful.com/files/ea4/ea44330b887dfec278dbc4626a759547_thumb.png",
-              "visible": true,
-              "is_temporary": false
-            }
-          ],
-          "options": [
-            {
-              "id": "OptionKey",
-              "value": "OptionValue"
-            }
-          ],
-          "sku": null,
-          "discontinued": true,
-          "out_of_stock": true
-        }
-      ],
-      "branding_items": [
-        {
-          "id": 1,
-          "external_id": "item-1",
-          "variant_id": 1,
-          "sync_variant_id": 1,
-          "external_variant_id": "variant-1",
-          "warehouse_product_variant_id": 1,
-          "product_template_id": 1,
-          "quantity": 1,
-          "price": "13.00",
-          "retail_price": "13.00",
-          "name": "Enhanced Matte Paper Poster 18×24",
-          "product": {
-            "variant_id": 3001,
-            "product_id": 301,
-            "image": "https://files.cdn.printful.com/products/71/5309_1581412541.jpg",
-            "name": "Bella + Canvas 3001 Unisex Short Sleeve Jersey T-Shirt with Tear Away Label (White / 4XL)"
-          },
-          "files": [
-            {
-              "type": "default",
-              "id": 10,
-              "url": "​https://www.example.com/files/tshirts/example.png",
-              "options": [
-                {
-                  "id": "template_type",
-                  "value": "native"
-                }
-              ],
-              "hash": "ea44330b887dfec278dbc4626a759547",
-              "filename": "shirt1.png",
-              "mime_type": "image/png",
-              "size": 45582633,
-              "width": 1000,
-              "height": 1000,
-              "dpi": 300,
-              "status": "ok",
-              "created": 1590051937,
-              "thumbnail_url": "https://files.cdn.printful.com/files/ea4/ea44330b887dfec278dbc4626a759547_thumb.png",
-              "preview_url": "https://files.cdn.printful.com/files/ea4/ea44330b887dfec278dbc4626a759547_thumb.png",
-              "visible": true,
-              "is_temporary": false
-            }
-          ],
-          "options": [
-            {
-              "id": "OptionKey",
-              "value": "OptionValue"
-            }
-          ],
-          "sku": null,
-          "discontinued": true,
-          "out_of_stock": true
-        }
-      ],
-      "incomplete_items": [
-        {
-          "name": "Red T-Shirt",
-          "quantity": 1,
-          "sync_variant_id": 70,
-          "external_variant_id": "external-id",
-          "external_line_item_id": "external-line-item-id"
-        }
-      ],
-      "costs": {
-        "currency": "USD",
-        "subtotal": "10.00",
-        "discount": "0.00",
-        "shipping": "5.00",
-        "digitization": "0.00",
-        "additional_fee": "0.00",
-        "fulfillment_fee": "0.00",
-        "retail_delivery_fee": "0.00",
-        "tax": "0.00",
-        "vat": "0.00",
-        "total": "15.00"
-      },
-      "retail_costs": {
-        "currency": "USD",
-        "subtotal": "10.00",
-        "discount": "0.00",
-        "shipping": "5.00",
-        "tax": "0.00",
-        "vat": "0.00",
-        "total": "15.00"
-      },
-      "pricing_breakdown": [
-        {
-          "customer_pays": "3.75",
-          "printful_price": "6",
-          "profit": "-2.25",
-          "currency_symbol": "USD"
-        }
-      ],
-      "shipments": [
-        {
-          "id": 10,
-          "carrier": "FEDEX",
-          "service": "FedEx SmartPost",
-          "tracking_number": 0,
-          "tracking_url": "https://www.fedex.com/fedextrack/?tracknumbers=0000000000",
-          "created": 1588716060,
-          "ship_date": "2020-05-05",
-          "shipped_at": 1588716060,
-          "reshipment": false,
-          "items": [
-            {
-              "item_id": 1,
-              "quantity": 1,
-              "picked": 1,
-              "printed": 1
-            }
-          ]
-        }
-      ],
-      "gift": {
-        "subject": "To John",
-        "message": "Have a nice day"
-      },
-      "packing_slip": {
-        "email": "your-name@your-domain.com",
-        "phone": "+371 28888888",
-        "message": "Message on packing slip",
-        "logo_url": "​http://www.your-domain.com/packing-logo.png",
-        "store_name": "Your store name",
-        "custom_order_id": "kkk2344lm"
-      }
-    }
+    "sync_product": { "id": 12345, "name": "T-Shirt Baru" }
   }
 }
+```
 
+### 5. Website Memproses Data
+Website Anda menerima data tersebut dan melakukan aksi otomatis:
+*   **`product_synced` / `product_updated`**: Website otomatis menarik detail produk (warna, ukuran, gambar) ke database lokal.
+*   **`product_deleted`**: Website otomatis menyembunyikan produk tersebut dari halaman depan.
+*   **`stock_updated`**: Website otomatis memperbarui label "In Stock" atau "Out of Stock".
 
+### 6. Respon Balik (Handshake)
+Setelah selesai memproses, website Anda akan membalas dengan status **200 OK**. Jika server tidak membalas, Printful akan mencoba mengirim ulang data tersebut beberapa kali (retry).
+
+---
+
+## 🛠 Cara Setup Ulang (Jika Pindah Hosting/Server)
+
+1.  Pastikan URL website di `.env` (VPS) sudah benar:
+    ```bash
+    NEXT_PUBLIC_SITE_URL=https://www.printfultshirt.com
+    ```
+2.  Jalankan pendaftaran ulang:
+    ```bash
+    docker compose exec nextjs npx tsx scripts/setup-webhooks.ts
+    ```
+
+## 🔐 Keamanan & Debugging
+
+*   **Simulasi**: Gunakan Simulator Webhook di Dashboard Printful dengan URL `https://www.printfultshirt.com/api/printful/webhook`.
+*   **Log**: Anda bisa memantau data yang masuk secara real-time di VPS dengan perintah:
+    ```bash
+    docker compose logs -f nextjs
+    ```
+
+---
+*Dokumentasi ini dibuat untuk membantu pengelolaan integrasi otomatis Pintful.*

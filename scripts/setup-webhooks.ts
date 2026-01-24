@@ -10,7 +10,8 @@ async function setupWebhooks() {
         process.exit(1);
     }
 
-    const webhookUrl = `${siteUrl.replace(/\/$/, "")}/api/printful/webhook`;
+    const secret = process.env.SYNC_WEBHOOK_SECRET;
+    const webhookUrl = `${siteUrl.replace(/\/$/, "")}/api/printful/webhook${secret ? `?secret=${secret}` : ""}`;
 
     console.log(`🔗 Target URL: ${webhookUrl}`);
 
@@ -21,7 +22,6 @@ async function setupWebhooks() {
                 "product_synced",
                 "product_updated",
                 "product_deleted",
-                "stock_updated",
                 "order_failed",
                 "order_canceled"
             ],
