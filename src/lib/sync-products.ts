@@ -70,6 +70,12 @@ export function mapDBVariantToPrintful(v: any) {
         retail_price: Number(v.retailPrice),
         currency: v.currency || "USD",
         preview_url: v.previewUrl || undefined,
+        product: v.previewUrl ? {
+            variant_id: Number(v.printfulVariantId),
+            product_id: 0,
+            image: v.previewUrl,
+            name: v.name
+        } : undefined,
         files: Array.isArray(v.files) ? v.files : [],
         options: Array.isArray(v.options) ? v.options : [],
         in_stock: v.inStock ?? true,
@@ -280,6 +286,7 @@ export async function getProductsFromDB(): Promise<PrintfulProduct[]> {
             return {
                 ...product,
                 id: product.printfulId,
+                thumbnail_url: product.thumbnailUrl || undefined,
                 description: product.description || undefined,
                 variants,
                 categories: categoriesData
@@ -477,7 +484,14 @@ export async function getProductFromDB(printfulId: string): Promise<any | null> 
         const variants = variantsData.map(mapDBVariantToPrintful);
         const category = catData.length > 0 ? catData[0] : null;
 
-        return { ...product, id: product.printfulId, variants, category };
+        return {
+            ...product,
+            id: product.printfulId,
+            thumbnail_url: product.thumbnailUrl || undefined,
+            description: product.description || undefined,
+            variants,
+            category
+        };
     } catch (e) {
         console.error("[DB] Failed to get product:", e);
         return null;

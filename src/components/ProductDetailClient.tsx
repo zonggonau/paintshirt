@@ -93,7 +93,9 @@ export default function ProductDetailClient({ product }: { product: PrintfulProd
 
     const activeVariantFile = activeVariant.files?.find(
         ({ type }) => type === "preview"
-    ) || (activeVariant.preview_url ? { preview_url: activeVariant.preview_url } : null) || (product.thumbnail_url ? { preview_url: product.thumbnail_url } : null);
+    ) || (activeVariant.preview_url ? { preview_url: activeVariant.preview_url } : null)
+        || (activeVariant.product?.image ? { preview_url: activeVariant.product.image } : null)
+        || (product.thumbnail_url ? { preview_url: product.thumbnail_url } : null);
 
     const price = typeof activeVariant.retail_price === 'number' ? activeVariant.retail_price : Number(activeVariant.retail_price);
     const formattedPrice = isNaN(price) ? "Price N/A" : new Intl.NumberFormat("en-US", {

@@ -16,7 +16,9 @@ export default function ProductDetailImages({ product }: { product: any }) {
 
     const activeVariantFile = activeVariant.files?.find(
         ({ type }: any) => type === "preview"
-    ) || (activeVariant.preview_url ? { preview_url: activeVariant.preview_url } : null) || (product.thumbnail_url ? { preview_url: product.thumbnail_url } : null);
+    ) || (activeVariant.preview_url ? { preview_url: activeVariant.preview_url } : null)
+        || (activeVariant.product?.image ? { preview_url: activeVariant.product.image } : null)
+        || (product.thumbnail_url ? { preview_url: product.thumbnail_url } : null);
 
     // Get all unique images from all variants
     const allImages = useMemo(() => {
@@ -24,6 +26,7 @@ export default function ProductDetailImages({ product }: { product: any }) {
         variants.forEach((variant: any) => {
             const previewUrl = variant.files?.find((f: any) => f.type === "preview")?.preview_url
                 || variant.preview_url
+                || variant.product?.image
                 || product.thumbnail_url;
 
             if (previewUrl) {
