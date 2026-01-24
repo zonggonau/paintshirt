@@ -41,6 +41,16 @@ async function seed() {
         console.error("❌ Failed to sync categories:", error);
     }
 
+    // 3. Optional: Clear Products (Only if requested via environment variable)
+    if (process.env.CLEAN_START === "true") {
+        console.log(" Cleaning up existing products as requested...");
+        const { products, productVariants, productCategories } = await import("../src/db/schema");
+        await db.delete(productCategories);
+        await db.delete(productVariants);
+        await db.delete(products);
+        console.log("✅ Products cleared. Categories preserved.");
+    }
+
     console.log("✨ Seeding completed.");
     process.exit(0);
 }
