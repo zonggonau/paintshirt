@@ -10,9 +10,9 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "files.cdn.printful.com",
+        hostname: "**.printful.com",
         port: "",
-        pathname: "/files/**",
+        pathname: "/**",
       },
     ],
   },
