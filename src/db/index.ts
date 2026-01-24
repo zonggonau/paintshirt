@@ -3,9 +3,10 @@ import postgres from "postgres";
 import * as schema from "./schema";
 
 // Database connection URL from environment variable
-const connectionString = process.env.DATABASE_URL;
+// Use a dummy URL during build if not provided to prevent Drizzle initialization errors
+const connectionString = process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/postgres";
 
-if (!connectionString) {
+if (!process.env.DATABASE_URL) {
     console.warn(
         "WARNING: DATABASE_URL is not defined. Database features will not work."
     );

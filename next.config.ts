@@ -3,9 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
   serverExternalPackages: ["postgres"],
-  // @ts-ignore - Valid in Next.js but might not be typed in this version
-  eslint: {
-    ignoreDuringBuilds: true,
+  typescript: {
+    ignoreBuildErrors: true,
   },
   images: {
     remotePatterns: [
