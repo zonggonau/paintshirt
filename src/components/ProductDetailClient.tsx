@@ -285,7 +285,7 @@ export default function ProductDetailClient({ product }: { product: PrintfulProd
                     )}
                 </div>
             )}
-            <ShippingEstimator variantId={activeVariantExternalId} />
+            <ShippingEstimator variantId={variants[0]?.external_id || activeVariantExternalId} />
 
             {/* Add to Cart Button */}
             <div className="space-y-3">

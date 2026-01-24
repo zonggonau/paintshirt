@@ -12,22 +12,27 @@ export default function ShippingEstimator({ variantId }: { variantId: string | n
             return;
         }
 
-        setLoading(true);
-        fetch(`/api/shipping?variantId=${variantId}`)
-            .then(res => res.json())
-            .then(res => {
-                setData(res);
-                setLoading(false);
-            })
-            .catch((err) => {
+        // Server-side detection only (Clean & Fast)
+        // Backend will detect country from headers (x-vercel-ip-country)
+        const fetchEstimate = async () => {
+            setLoading(true);
+            try {
+                const res = await fetch(`/api/shipping?variantId=${variantId}`);
+                const data = await res.json();
+                setData(data);
+            } catch (err) {
                 console.error(err);
+            } finally {
                 setLoading(false);
-            });
+            }
+        };
+
+        fetchEstimate();
     }, [variantId]);
 
     if (loading) {
         return (
-            <div className="bg-gray-50 rounded-xl p-6 border border-gray-100 animate-pulse">
+            <div className="bg-gray-50 rounded-xl p-6 border border-gray-100 animate-pulse mt-6">
                 <div className="h-4 bg-gray-200 rounded w-1/3 mb-2"></div>
                 <div className="h-6 bg-gray-200 rounded w-1/2 mb-2"></div>
                 <div className="h-4 bg-gray-200 rounded w-1/4"></div>
@@ -35,14 +40,12 @@ export default function ShippingEstimator({ variantId }: { variantId: string | n
         );
     }
 
-    if (!data || data.error || !data.estimate && !data.rate) {
-        // Fallback or just don't show if backend failed (e.g. no Printful key)
+    if (!data || data.error || !data.rate) {
         return null;
     }
 
     return (
-        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm relative overflow-hidden group hover:border-indigo-100 transition-colors">
-            {/* Decorative blob */}
+        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm relative overflow-hidden group hover:border-indigo-100 transition-colors mt-6">
             <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-indigo-50 rounded-full blur-2xl opacity-50 group-hover:opacity-100 transition"></div>
 
             <div className="flex items-start gap-4 relative z-10">
