@@ -49,9 +49,7 @@ export default function ShippingEstimator({ variantId }: { variantId: string | n
             <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-indigo-50 rounded-full blur-2xl opacity-50 group-hover:opacity-100 transition"></div>
 
             <div className="flex items-start gap-4 relative z-10">
-                <div className="p-3 bg-indigo-50 rounded-full text-indigo-600 shrink-0">
-                    <span className="material-symbols-outlined text-2xl">local_shipping</span>
-                </div>
+
 
                 <div className="flex-1">
                     <p className="text-sm font-semibold text-gray-900 mb-1">
