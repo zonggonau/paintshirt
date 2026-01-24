@@ -24,11 +24,10 @@ const Product = (product: any) => {
 
     const activeVariant = firstVariant;
 
-    const activeVariantFile = activeVariant.files?.find(
-        ({ type }: any) => type === "preview"
-    ) || (activeVariant.preview_url ? { preview_url: activeVariant.preview_url } : null)
-        || (activeVariant.product?.image ? { preview_url: activeVariant.product.image } : null)
-        || (product.thumbnail_url ? { preview_url: product.thumbnail_url } : null);
+    const activeVariantFile = (product.thumbnail_url ? { preview_url: product.thumbnail_url } : null)
+        || activeVariant.files?.find(({ type }: any) => type === "preview")
+        || (activeVariant.preview_url ? { preview_url: activeVariant.preview_url } : null)
+        || (activeVariant.product?.image ? { preview_url: activeVariant.product.image } : null);
 
     if (!activeVariant) {
         return null; // Or some fallback UI
