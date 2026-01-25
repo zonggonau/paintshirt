@@ -228,3 +228,4 @@ const addToWishlist = () => {
 3. [ ] Test semua tracking events
 4. [ ] Setup Goals/Conversions di Google Analytics
 5. [ ] Monitor data masuk di GA4 Real-time
+

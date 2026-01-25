@@ -4,6 +4,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import useWishlistState from "../hooks/useWishlistState";
 import useSnipcartCount from "../hooks/useSnipcartCount";
 import { PrintfulCategory } from "../types";
@@ -474,10 +475,12 @@ const Layout = ({ children, categories = [] }: { children: React.ReactNode, cate
                                                     >
                                                         <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-gray-100 border border-gray-200 shadow-sm transition-transform duration-300 group-hover:scale-[1.02] group-hover:shadow-md">
                                                             {subCat.image_url ? (
-                                                                <img
+                                                                <Image
                                                                     src={subCat.image_url}
                                                                     alt={subCat.title}
-                                                                    className="w-full h-full object-cover"
+                                                                    fill
+                                                                    className="object-cover"
+                                                                    sizes="250px"
                                                                 />
                                                             ) : (
                                                                 <div className="w-full h-full flex items-center justify-center text-gray-400">

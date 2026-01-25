@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { PrintfulProduct } from '../types';
 
 interface CollectionSectionProps {
@@ -78,10 +79,12 @@ export default function CollectionSection({
                             {/* Product Image */}
                             <div className="relative aspect-square overflow-hidden bg-gray-100">
                                 {previewImage ? (
-                                    <img
+                                    <Image
                                         src={previewImage}
                                         alt={product.name}
-                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                        fill
+                                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                        sizes="(max-width: 768px) 100vw, 33vw"
                                     />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center text-gray-400">

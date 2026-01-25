@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import Image from "next/image";
 
 export default function ProductDetailImages({ product }: { product: any }) {
     const { variants } = product;
@@ -134,17 +135,18 @@ export default function ProductDetailImages({ product }: { product: any }) {
             >
                 {selectedImageUrl && (
                     <div className="w-full h-full relative">
-                        <img
+                        <Image
                             key={selectedImageUrl}
                             src={selectedImageUrl}
+                            fill
                             style={{
-                                width: "100%",
-                                height: "100%",
-                                objectFit: "cover",
                                 transition: "transform 0.2s ease-out",
                                 ...zoomStyle
                             }}
+                            className="object-cover"
                             alt={product.name}
+                            priority
+                            sizes="(max-width: 1024px) 100vw, 50vw"
                         />
                     </div>
                 )}
@@ -182,10 +184,12 @@ export default function ProductDetailImages({ product }: { product: any }) {
                                     : "hover:ring-2 hover:ring-gray-300 ring-offset-1"
                                     }`}
                             >
-                                <img
+                                <Image
                                     src={image.url}
-                                    className="absolute inset-0 w-full h-full object-cover"
+                                    fill
+                                    className="object-cover"
                                     alt={`${product.name} - ${image.color} ${image.size}`}
+                                    sizes="100px"
                                 />
                                 {image.color && (
                                     <div className="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm px-1 py-0.5">

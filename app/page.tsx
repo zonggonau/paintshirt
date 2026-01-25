@@ -14,6 +14,7 @@ import {
   CollectionBorderGrid
 } from "../src/components/CollectionTemplates";
 import Link from "next/link";
+import Image from "next/image";
 import Testimonials from "../src/components/home/Testimonials";
 
 async function getProducts(): Promise<{ products: any[]; error?: string }> {
@@ -165,11 +166,15 @@ export default async function Home() {
                 <div className="relative w-64 h-64 rotate-[-12deg] hover:rotate-0 transition duration-500 hover:scale-105 hover:z-10">
                   <div className="absolute inset-0 bg-white/20 backdrop-blur-md rounded-2xl shadow-2xl transform"></div>
                   {products[0]?.variants?.[0]?.files?.find((f: any) => f.type === 'preview')?.preview_url && (
-                    <img
-                      src={products[0].variants[0].files.find((f: any) => f.type === 'preview')?.preview_url}
-                      alt="Featured Product"
-                      className="absolute inset-2 w-[calc(100%-16px)] h-[calc(100%-16px)] object-cover rounded-xl shadow-lg"
-                    />
+                    <div className="absolute inset-2 overflow-hidden rounded-xl shadow-lg">
+                      <Image
+                        src={products[0].variants[0].files.find((f: any) => f.type === 'preview')?.preview_url}
+                        alt="Featured Product"
+                        fill
+                        className="object-cover"
+                        priority
+                      />
+                    </div>
                   )}
                 </div>
               </div>
@@ -179,11 +184,14 @@ export default async function Home() {
                 <div className="relative w-64 h-64 rotate-[12deg] hover:rotate-0 transition duration-500 hover:scale-105 hover:z-10">
                   <div className="absolute inset-0 bg-white/20 backdrop-blur-md rounded-2xl shadow-2xl transform"></div>
                   {products[1]?.variants?.[0]?.files?.find((f: any) => f.type === 'preview')?.preview_url && (
-                    <img
-                      src={products[1].variants[0].files.find((f: any) => f.type === 'preview')?.preview_url}
-                      alt="Featured Product"
-                      className="absolute inset-2 w-[calc(100%-16px)] h-[calc(100%-16px)] object-cover rounded-xl shadow-lg"
-                    />
+                    <div className="absolute inset-2 overflow-hidden rounded-xl shadow-lg">
+                      <Image
+                        src={products[1].variants[0].files.find((f: any) => f.type === 'preview')?.preview_url}
+                        alt="Featured Product"
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
                   )}
                 </div>
               </div>

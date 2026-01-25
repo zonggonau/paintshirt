@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 
 export default function DebugCategoriesPage() {
     const [data, setData] = useState<any>(null);
@@ -63,7 +64,14 @@ export default function DebugCategoriesPage() {
                             <div key={cat.id} className="bg-gray-800 p-4 rounded border border-gray-700 hover:border-blue-500 transition">
                                 <div className="flex items-center gap-4 mb-3">
                                     {cat.image_url && (
-                                        <img src={cat.image_url} alt="" className="w-12 h-12 rounded object-cover bg-white" />
+                                        <div className="relative w-12 h-12 flex-shrink-0 bg-white rounded overflow-hidden">
+                                            <Image
+                                                src={cat.image_url}
+                                                alt=""
+                                                fill
+                                                className="object-cover"
+                                            />
+                                        </div>
                                     )}
                                     <div>
                                         <p className="font-bold text-white">{cat.title || cat.name}</p>

@@ -19,35 +19,39 @@ class PrintfulClient {
             "Authorization": `Bearer ${this.apiKey}`,
         };
 
-        try {
-            const response = await fetch(url, {
-                method,
-                headers,
-                body: body ? JSON.stringify(body) : undefined,
-                ...options,
-            });
+        const timeout = 30000; // 30 seconds timeout
 
-            if (!response.ok) {
-                let errorData;
-                try {
-                    errorData = await response.json();
-                } catch (e) {
-                    errorData = { error: response.statusText };
+        return fetchWithRetry(async () => {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+
+            try {
+                const response = await fetch(url, {
+                    method,
+                    headers,
+                    body: body ? JSON.stringify(body) : undefined,
+                    signal: controller.signal,
+                    ...options,
+                });
+
+                clearTimeout(id);
+
+                if (!response.ok) {
+                    let errorData;
+                    try {
+                        errorData = await response.json();
+                    } catch (e) {
+                        errorData = { error: response.statusText };
+                    }
+                    throw new Error(`Printful API Error ${response.status}: ${JSON.stringify(errorData)}`);
                 }
-                throw new Error(`Printful API Error ${response.status}: ${JSON.stringify(errorData)}`);
-            }
 
-            return await response.json();
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            console.error(`[Printful API] Network error for URL: ${url}. Error: ${errorMessage}`);
-
-            // Ensure error isn't empty object
-            if (typeof error === 'object' && error !== null && Object.keys(error as object).length === 0 && !(error instanceof Error)) {
-                throw new Error(`Printful fetch failed with empty error object. URL: ${url}`);
+                return await response.json();
+            } catch (error) {
+                clearTimeout(id);
+                throw error;
             }
-            throw error;
-        }
+        }, 3, 1500); // 3 retries, starting with 1.5s delay
     }
 
     async get(endpoint: string, options?: RequestInit) {

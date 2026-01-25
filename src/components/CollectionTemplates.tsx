@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { PrintfulProduct } from '../types';
 
 interface CollectionTemplateProps {
@@ -56,7 +57,13 @@ export function CollectionTwoGrid({ title, products, categorySlug }: CollectionT
                     return (
                         <Link key={product.id} href={getProductUrl(product)} className="group relative aspect-[4/5] md:aspect-square rounded-2xl overflow-hidden block">
                             {image && (
-                                <img src={image} alt={product.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                                <Image
+                                    src={image}
+                                    alt={product.name}
+                                    fill
+                                    className="object-cover transition-transform duration-700 group-hover:scale-105"
+                                    sizes="(max-width: 768px) 100vw, 50vw"
+                                />
                             )}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80" />
                             <div className="absolute bottom-0 left-0 right-0 p-8 text-white transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
@@ -98,7 +105,13 @@ export function CollectionThreeGrid({ title, products, categorySlug }: Collectio
                         <Link key={product.id} href={getProductUrl(product)} className="group block">
                             <div className="relative aspect-square rounded-xl overflow-hidden bg-gray-100 mb-4">
                                 {image && (
-                                    <img src={image} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                    <Image
+                                        src={image}
+                                        alt={product.name}
+                                        fill
+                                        className="object-cover group-hover:scale-110 transition-transform duration-500"
+                                        sizes="(max-width: 768px) 100vw, 33vw"
+                                    />
                                 )}
                                 <div className="absolute bottom-4 right-4 bg-white px-3 py-1 rounded-full shadow-lg text-sm font-bold opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all">
                                     {formatPrice(price, currency)}
@@ -145,7 +158,13 @@ export function CollectionCarousel({ title, products, categorySlug }: Collection
                             <Link key={product.id} href={getProductUrl(product)} className="min-w-[280px] md:min-w-[320px] snap-center group block bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-all">
                                 <div className="aspect-[4/5] rounded-xl overflow-hidden bg-gray-100 mb-4 relative">
                                     {image && (
-                                        <img src={image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                        <Image
+                                            src={image}
+                                            alt={product.name}
+                                            fill
+                                            className="object-cover group-hover:scale-105 transition-transform duration-500"
+                                            sizes="320px"
+                                        />
                                     )}
                                 </div>
                                 <div className="flex justify-between items-start">
@@ -186,7 +205,13 @@ export function CollectionSixGrid({ title, products, categorySlug }: CollectionT
                         <Link key={product.id} href={getProductUrl(product)} className="group block">
                             <div className="aspect-square rounded-lg overflow-hidden bg-gray-100 mb-3 relative group-hover:ring-2 ring-indigo-500 transition-all">
                                 {image && (
-                                    <img src={image} alt={product.name} className="w-full h-full object-cover" />
+                                    <Image
+                                        src={image}
+                                        alt={product.name}
+                                        fill
+                                        className="object-cover"
+                                        sizes="(max-width: 768px) 50vw, 16vw"
+                                    />
                                 )}
                                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
                             </div>
@@ -228,10 +253,12 @@ export function CollectionRichGrid({ title, products, categorySlug }: Collection
                         <div key={product.id} className="group relative">
                             <div className="aspect-[1/1] w-full overflow-hidden rounded-md bg-gray-200 lg:aspect-none group-hover:opacity-75 lg:h-80 relative">
                                 {image ? (
-                                    <img
+                                    <Image
                                         src={image}
                                         alt={product.name}
-                                        className="h-full w-full object-cover object-center lg:h-full lg:w-full"
+                                        fill
+                                        className="object-cover object-center lg:h-full lg:w-full"
+                                        sizes="(max-width: 768px) 100vw, 25vw"
                                     />
                                 ) : (
                                     <div className="flex h-full items-center justify-center text-gray-400">No Image</div>
@@ -287,12 +314,14 @@ export function CollectionBorderGrid({ title, products, categorySlug }: Collecti
                             href={getProductUrl(product)}
                             className="group relative border-r border-t border-gray-200 p-4 sm:p-6 hover:bg-gray-50 transition"
                         >
-                            <div className="aspect-[1/1] overflow-hidden rounded-lg bg-gray-100 group-hover:opacity-75">
+                            <div className="aspect-[1/1] overflow-hidden rounded-lg bg-gray-100 group-hover:opacity-75 relative">
                                 {image && (
-                                    <img
+                                    <Image
                                         src={image}
                                         alt={product.name}
-                                        className="h-full w-full object-contain object-center"
+                                        fill
+                                        className="object-contain object-center"
+                                        sizes="(max-width: 768px) 50vw, 25vw"
                                     />
                                 )}
                             </div>

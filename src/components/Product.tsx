@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 import useWishlistDispatch from "../hooks/useWishlistDispatch";
 import useWishlistState from "../hooks/useWishlistState";
 
 import { slugify } from "../lib/slugify";
-import ProductDetailSkeleton from "./ProductDetailSkeleton";
 
 const Product = (product: any) => {
     const wishlistDispatch = useWishlistDispatch();
@@ -48,12 +47,6 @@ const Product = (product: any) => {
 
     const onWishlist = isSaved(id);
 
-    const [isNavigating, setIsNavigating] = useState(false);
-
-    const handleLinkClick = () => {
-        setIsNavigating(true);
-    };
-
     const truncatedName = name.length > 50 ? name.substring(0, 50) + "..." : name;
     const slug = slugify(name);
 
@@ -62,16 +55,8 @@ const Product = (product: any) => {
     const catSlug = slugify(product.category?.name || "all");
     const productUrl = `/products/categories/${catId}/${catSlug}/${id}/${slug}`;
 
-    if (isNavigating) {
-        return (
-            <div className="fixed inset-0 z-[100] bg-white overflow-y-auto">
-                <ProductDetailSkeleton />
-            </div>
-        );
-    }
-
     return (
-        <Link href={productUrl} onClick={handleLinkClick}>
+        <Link href={productUrl}>
             <article className="group relative bg-white rounded-2xl overflow-hidden hover-lift shadow-sm hover:shadow-xl transition-all duration-300 animate-scale-in cursor-pointer h-full flex flex-col border border-gray-100">
                 <button
                     onClick={addToWishlist}
@@ -104,11 +89,12 @@ const Product = (product: any) => {
                 {/* Product Image */}
                 <div className="relative w-full aspect-square bg-gray-50 overflow-hidden flex-shrink-0">
                     {activeVariantFile ? (
-                        <img
+                        <Image
                             src={activeVariantFile.preview_url}
-                            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-700"
                             alt={`${activeVariant.name} ${name}`}
-                            loading="lazy"
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
                         />
                     ) : (
                         <div className="absolute inset-0 flex items-center justify-center bg-gray-100 text-gray-400">

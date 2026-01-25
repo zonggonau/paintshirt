@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { PrintfulCategory } from '../types';
 
 interface BrandsSectionProps {
@@ -52,10 +53,12 @@ export default function BrandsSection({ brands }: BrandsSectionProps) {
                             >
                                 {brandImg ? (
                                     <div className="relative w-full h-full flex items-center justify-center">
-                                        <img
+                                        <Image
                                             src={brandImg}
                                             alt={brandName}
-                                            className="max-w-full max-h-full object-contain opacity-70 group-hover:opacity-100 transition-opacity"
+                                            fill
+                                            className="object-contain opacity-70 group-hover:opacity-100 transition-opacity"
+                                            sizes="(max-width: 768px) 50vw, 20vw"
                                         />
                                     </div>
                                 ) : (
