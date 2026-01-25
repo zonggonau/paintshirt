@@ -151,3 +151,10 @@ Ini memastikan Printful mulai mengirim data ke "instalasi bersih" yang baru ini.
 bash
 docker compose exec nextjs npx tsx scripts/setup-webhooks.ts
 Hasil Akhir: Sistem Anda sekarang benar-benar baru. Produk akan mulai muncul secara otomatis di website setiap kali Webhook dari Printful masuk, atau Anda bisa memicu sinkronisasi manual jika diperlukan. Website juga sekarang menggunakan tag <img /> sehingga masalah gambar tidak tampil seharusnya sudah hilang total.
+
+
+docker exec -it dropshiping-postgres psql -U postgres
+
+ALTER USER postgres WITH PASSWORD 'postgres';
+\q
+docker compose restart nextjs

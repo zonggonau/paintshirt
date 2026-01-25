@@ -1,3 +1,5 @@
+import ProductGridSkeleton from "@/src/components/ProductGridSkeleton";
+
 export default function ProductsLoading() {
     return (
         <div className="bg-gray-50 min-h-screen py-12">
@@ -15,24 +17,7 @@ export default function ProductsLoading() {
                     <div className="w-32 h-14 bg-gray-200 rounded-xl"></div>
                 </div>
 
-                {/* Product Grid Skeleton */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {[...Array(8)].map((_, i) => (
-                        <div key={i} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 animate-pulse">
-                            {/* Image Placeholder */}
-                            <div className="w-full aspect-square bg-gray-200"></div>
-
-                            {/* Content Placeholder */}
-                            <div className="p-5 space-y-3">
-                                <div className="h-5 bg-gray-200 rounded w-3/4"></div>
-                                <div className="flex justify-between items-center pt-2">
-                                    <div className="h-6 bg-gray-200 rounded w-20"></div>
-                                    <div className="h-4 bg-gray-200 rounded w-16"></div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
+                <ProductGridSkeleton />
             </div>
         </div>
     );

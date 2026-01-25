@@ -6,6 +6,8 @@ import { PrintfulProduct } from "../types";
 import Product from "./Product";
 import SearchBar from "./SearchBar";
 
+import ProductGridSkeleton from "./ProductGridSkeleton";
+
 interface ProductGridProps {
     products: PrintfulProduct[];
     hideFilters?: boolean;
@@ -24,12 +26,18 @@ const ProductGrid: React.FC<ProductGridProps> = ({
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState("");
     const [sortOption, setSortOption] = useState("");
+    const [isPaginating, setIsPaginating] = useState(false);
 
     // Pagination State
     const [internalPage, setInternalPage] = useState(1);
     const isServerSidePagination = totalProducts !== undefined && propPage !== undefined;
     const currentPage = isServerSidePagination ? propPage! : internalPage;
     const productsPerPage = 20;
+
+    // Reset pagination state when page changes
+    useEffect(() => {
+        setIsPaginating(false);
+    }, [currentPage]);
 
     // Helper to get minimum price
     const getProductPrice = (product: PrintfulProduct) => {
@@ -87,14 +95,17 @@ const ProductGrid: React.FC<ProductGridProps> = ({
         : Math.ceil(filteredProducts.length / productsPerPage);
 
     const paginate = (pageNumber: number) => {
+        setIsPaginating(true);
         if (isServerSidePagination) {
             // Server-side: Update URL while keeping path (important for dynamic category routes)
             const currentPath = window.location.pathname;
             router.push(`${currentPath}?page=${pageNumber}`);
         } else {
             // Client-side: Update state
-            setInternalPage(pageNumber);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            setTimeout(() => {
+                setInternalPage(pageNumber);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }, 300); // Small delay for transition feel
         }
     };
 
@@ -161,7 +172,11 @@ const ProductGrid: React.FC<ProductGridProps> = ({
             )}
 
             {/* Product Grid */}
-            {filteredProducts.length > 0 ? (
+            {isPaginating ? (
+                <div className="mb-12">
+                    <ProductGridSkeleton />
+                </div>
+            ) : filteredProducts.length > 0 ? (
                 <>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {currentProducts.map((product) => (
