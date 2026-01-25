@@ -24,7 +24,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
     const canonicalPath = page > 1 ? `/products?page=${page}` : '/products';
 
     return {
-        title: `All Products ${page > 1 ? `- Page ${page}` : ''} | TEE-SOCIETY`,
+        title: `All Products ${page > 1 ? `- Page ${page}` : ''} | Printful T-Shirt`,
         description: 'Browse our complete collection of premium print-on-demand products.',
         alternates: {
             canonical: `${baseUrl}${canonicalPath}`,

@@ -609,6 +609,23 @@ async function syncSingleProductDetail(printfulProductId: number): Promise<{ add
     let added = 0;
     let updated = 0;
 
+    // Fallback description from catalog
+    let catalogDescription: string | null = null;
+    let catalogData: any = null;
+    const firstVariant = syncVariants[0];
+    if (firstVariant && firstVariant.product) {
+        try {
+            const catalogId = firstVariant.product.product_id;
+            const catRes = await printful.get(`products/${catalogId}`);
+            catalogData = catRes.result;
+            catalogDescription = catalogData?.product?.description || null;
+        } catch (e) {
+            console.warn(`[Sync] Could not fetch catalog data for product ${printfulProductId}`);
+        }
+    }
+
+    const finalDescription = syncProductData.description || catalogDescription || null;
+
     // Check if product exists
     const existingProduct = await db
         .select()
@@ -624,7 +641,7 @@ async function syncSingleProductDetail(printfulProductId: number): Promise<{ add
             .update(products)
             .set({
                 name: syncProductData.name,
-                description: syncProductData.description || null,
+                description: finalDescription,
                 thumbnailUrl: syncProductData.thumbnail_url,
                 variantsCount: syncProductData.variants || 0,
                 syncedCount: syncProductData.synced || 0,
@@ -645,7 +662,7 @@ async function syncSingleProductDetail(printfulProductId: number): Promise<{ add
                 printfulId: String(syncProductData.id),
                 externalId: syncProductData.external_id,
                 name: syncProductData.name,
-                description: syncProductData.description || null,
+                description: finalDescription,
                 thumbnailUrl: syncProductData.thumbnail_url,
                 variantsCount: syncProductData.variants || 0,
                 syncedCount: syncProductData.synced || 0,
@@ -742,12 +759,10 @@ async function syncSingleProductDetail(printfulProductId: number): Promise<{ add
     }
 
     // Sync product categories (from catalog product)
-    const firstVariant = syncVariants[0];
     if (firstVariant && firstVariant.product) {
-        const catalogId = firstVariant.product.product_id;
         try {
-            const catalogProductResponse = await printful.get(`products/${catalogId}`);
-            const mainCategoryId = catalogProductResponse.result?.product?.main_category_id;
+            // Use cached catalogData if available to save API calls
+            const mainCategoryId = catalogData?.product?.main_category_id;
 
             if (mainCategoryId) {
                 // 1. Check if category exists in our DB

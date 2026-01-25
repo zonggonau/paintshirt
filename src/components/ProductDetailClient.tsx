@@ -139,6 +139,8 @@ export default function ProductDetailClient({ product }: { product: PrintfulProd
         }
     };
 
+
+
     return (
         <div className="flex flex-col space-y-6">
             {/* Product Title & Price */}
