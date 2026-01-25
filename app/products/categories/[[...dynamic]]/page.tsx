@@ -209,6 +209,16 @@ export default async function DynamicCategoryPage({ params, searchParams }: Page
                                 <ProductDetailImages product={product} />
                                 <ProductDetailClient product={product} />
                             </div>
+
+                            {/* Description Section - Full Width Row */}
+                            {product.description && (
+                                <div className="border-t border-gray-100 p-8 lg:p-12 bg-gray-50/50">
+                                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Product Description</h2>
+                                    <div className="prose prose-lg max-w-none text-gray-600 leading-relaxed">
+                                        <div dangerouslySetInnerHTML={{ __html: product.description }} />
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="mt-12 bg-white rounded-2xl shadow-lg p-8">
@@ -225,7 +235,7 @@ export default async function DynamicCategoryPage({ params, searchParams }: Page
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
                         <RelatedProducts currentProduct={product} allProducts={allProducts} />
                     </div>
-                </div>
+                </div >
             </>
         );
     }

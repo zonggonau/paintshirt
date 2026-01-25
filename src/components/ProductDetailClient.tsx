@@ -399,15 +399,6 @@ export default function ProductDetailClient({ product }: { product: PrintfulProd
 
 
 
-            {/* Description */}
-            {product.description && (
-                <div className="border-t border-gray-200 pt-6">
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">Description</h3>
-                    <div className="prose prose-sm text-gray-600 leading-relaxed">
-                        <div dangerouslySetInnerHTML={{ __html: product.description }} />
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
