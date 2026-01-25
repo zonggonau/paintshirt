@@ -272,7 +272,7 @@ export function CollectionRichGrid({ title, products, categorySlug }: Collection
                                             {product.name}
                                         </Link>
                                     </h3>
-                                    <p className="mt-1 text-sm text-gray-500">{colorCount > 1 ? `${colorCount} colors` : 'Single color'}</p>
+                                    <p className="mt-1 text-sm text-gray-500">{colorCount > 1 ? `${colorCount} Variants` : 'Single variant'}</p>
                                 </div>
                                 <p className="text-sm font-medium text-gray-900">{formatPrice(price, currency)}</p>
                             </div>

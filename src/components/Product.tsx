@@ -129,7 +129,7 @@ const Product = (product: any) => {
                         </p>
                         {variants.length > 1 && (
                             <span className="text-[10px] text-gray-500 bg-gray-50 px-2 py-1 rounded-md border border-gray-100 flex-shrink-0">
-                                {variants.length} colors
+                                {variants.length} variants available
                             </span>
                         )}
                     </div>
