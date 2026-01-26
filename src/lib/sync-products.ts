@@ -2,7 +2,7 @@ import { db, products, productVariants, categories, productCategories } from "@/
 import { printful } from "./printful-client";
 import { eq, and, sql, desc, asc, inArray, like, or } from "drizzle-orm";
 import { PrintfulProduct, PrintfulCategory } from "../types";
-import { unstable_cache } from "next/cache";
+import { unstable_cache, revalidateTag } from "next/cache";
 
 export interface SyncResult {
     success: boolean;
@@ -77,7 +77,10 @@ export function mapDBVariantToPrintful(v: any) {
             image: v.previewUrl,
             name: v.name
         } : undefined,
-        files: Array.isArray(v.files) ? v.files : [],
+        // Only keep the preview file to save space in cache
+        files: Array.isArray(v.files)
+            ? v.files.filter((f: any) => f.type === 'preview').map((f: any) => ({ type: f.type, preview_url: f.preview_url }))
+            : [],
         options: Array.isArray(v.options) ? v.options : [],
         in_stock: v.inStock ?? true,
     };
@@ -165,6 +168,9 @@ export async function syncCategories(): Promise<{ added: number; updated: number
         console.error("[Sync] Category sync failed:", e);
     }
 
+    // Revalidate categories cache
+    revalidateTag("categories");
+
     return { added, updated };
 }
 
@@ -224,6 +230,10 @@ export async function syncProducts(): Promise<SyncResult> {
         }
 
 
+        // Revalidate all caches
+        revalidateTag("products");
+        revalidateTag("categories");
+
         return {
             success: true,
             productsAdded,
@@ -254,12 +264,13 @@ async function getProductsFromDBRaw(): Promise<PrintfulProduct[]> {
         return [];
     }
 
-    // Get all active products with their variants
+    // Get all active products with their variants - limit to 50 for the general list to save cache space
     const productsData = await db
         .select()
         .from(products)
         .where(eq(products.isActive, true))
-        .orderBy(desc(products.updatedAt), desc(products.id));
+        .orderBy(desc(products.updatedAt), desc(products.id))
+        .limit(50);
 
     // Get variants and categories for each product
     const result = await Promise.all(
