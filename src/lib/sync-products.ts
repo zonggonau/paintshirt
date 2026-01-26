@@ -2,6 +2,7 @@ import { db, products, productVariants, categories, productCategories } from "@/
 import { printful } from "./printful-client";
 import { eq, and, sql, desc, asc, inArray, like, or } from "drizzle-orm";
 import { PrintfulProduct, PrintfulCategory } from "../types";
+import { unstable_cache } from "next/cache";
 
 export interface SyncResult {
     success: boolean;
@@ -246,9 +247,9 @@ export async function syncProducts(): Promise<SyncResult> {
 
 
 /**
- * Get all synced products from database
+ * Get all synced products from database (UNCACHED version)
  */
-export async function getProductsFromDB(): Promise<PrintfulProduct[]> {
+async function getProductsFromDBRaw(): Promise<PrintfulProduct[]> {
     if (!db) {
         return [];
     }
@@ -262,7 +263,7 @@ export async function getProductsFromDB(): Promise<PrintfulProduct[]> {
 
     // Get variants and categories for each product
     const result = await Promise.all(
-        productsData.map(async (product) => {
+        productsData.map(async (product: any) => {
             const variantsData = await db
                 .select()
                 .from(productVariants)
@@ -298,10 +299,18 @@ export async function getProductsFromDB(): Promise<PrintfulProduct[]> {
 }
 
 /**
- * Get products for UI with pagination, filtering, searching and sorting
- * FULL DATABASE IMPLEMENTATION (No client-side slicing/sorting for main logic)
+ * Cached version of getProductsFromDB
  */
-export async function getProductsForUI(
+export const getProductsFromDB = unstable_cache(
+    async () => getProductsFromDBRaw(),
+    ["products-list"],
+    { tags: ["products"] }
+);
+
+/**
+ * Get products for UI with pagination, filtering, searching and sorting (UNCACHED version)
+ */
+async function getProductsForUIRaw(
     page = 1,
     limit = 20,
     categoryFilter?: string | number,
@@ -332,9 +341,9 @@ export async function getProductsForUI(
                     .where(inArray(categories.parentId, parentIds));
 
                 if (children.length > 0) {
-                    const childIds = children.map(c => c.id);
-                    const childPrintfulIds = children.map(c => c.printfulId);
-                    const newChildIds = childIds.filter(id => !allCategoryIds.includes(id));
+                    const childIds = children.map((c: any) => c.id);
+                    const childPrintfulIds = children.map((c: any) => c.printfulId);
+                    const newChildIds = childIds.filter((id: any) => !allCategoryIds.includes(id));
                     if (newChildIds.length > 0) {
                         allCategoryIds.push(...newChildIds);
                         await getChildren(childPrintfulIds);
@@ -437,7 +446,7 @@ export async function getProductsForUI(
 
     // 6. Hydrate results with full variants data
     // Converting the raw query result back to expected Full Product structure
-    const productsWithData = await Promise.all(filteredProducts.map(async (p) => {
+    const productsWithData = await Promise.all(filteredProducts.map(async (p: any) => {
         // Fetch full variant details for the UI
         const [variantsData, catData] = await Promise.all([
             db.select().from(productVariants).where(eq(productVariants.productId, p.id)),
@@ -466,14 +475,31 @@ export async function getProductsForUI(
 }
 
 /**
- * Get all categories from DB formatted for UI
+ * Cached version of getProductsForUI
  */
-export async function getCategoriesFromDB() {
+export const getProductsForUI = (
+    page = 1,
+    limit = 20,
+    categoryFilter?: string | number,
+    sortOption: string = 'newest',
+    searchQuery?: string
+) => {
+    return unstable_cache(
+        async () => getProductsForUIRaw(page, limit, categoryFilter, sortOption, searchQuery),
+        [`products-ui-${page}-${limit}-${categoryFilter}-${sortOption}-${searchQuery}`],
+        { tags: ["products"] }
+    )();
+};
+
+/**
+ * Get all categories from DB formatted for UI (UNCACHED version)
+ */
+async function getCategoriesFromDBRaw() {
     if (!db) return {};
 
     const dbCategories = await db.select().from(categories);
     const categoryMap: Record<number, string> = {};
-    dbCategories.forEach(cat => {
+    dbCategories.forEach((cat: any) => {
         categoryMap[cat.printfulId] = cat.name;
     });
 
@@ -481,14 +507,23 @@ export async function getCategoriesFromDB() {
 }
 
 /**
- * Get raw categories from database for layout
+ * Cached version of getCategoriesFromDB
  */
-export async function getRawCategoriesFromDB(): Promise<PrintfulCategory[]> {
+export const getCategoriesFromDB = unstable_cache(
+    async () => getCategoriesFromDBRaw(),
+    ["categories-map"],
+    { tags: ["categories"] }
+);
+
+/**
+ * Get raw categories from database for layout (UNCACHED version)
+ */
+async function getRawCategoriesFromDBRaw(): Promise<PrintfulCategory[]> {
     if (!db) return [];
 
     try {
         const dbCategories = await db.select().from(categories);
-        return dbCategories.map(cat => ({
+        return dbCategories.map((cat: any) => ({
             id: cat.id,
             printful_id: cat.printfulId,
             parent_id: cat.parentId || 0,
@@ -505,9 +540,18 @@ export async function getRawCategoriesFromDB(): Promise<PrintfulCategory[]> {
 }
 
 /**
- * Get single product from DB by Printful ID with category info
+ * Cached version of getRawCategoriesFromDB
  */
-export async function getProductFromDB(printfulId: string): Promise<any | null> {
+export const getRawCategoriesFromDB = unstable_cache(
+    async () => getRawCategoriesFromDBRaw(),
+    ["categories-raw"],
+    { tags: ["categories"] }
+);
+
+/**
+ * Get single product from DB by Printful ID with category info (UNCACHED version)
+ */
+async function getProductFromDBRaw(printfulId: string): Promise<any | null> {
     if (!db) return null;
 
     try {
@@ -548,9 +592,20 @@ export async function getProductFromDB(printfulId: string): Promise<any | null> 
 }
 
 /**
- * Get all brands (categories with parent ID 159) from DB
+ * Cached version of getProductFromDB
  */
-export async function getBrandsFromDB(): Promise<any[]> {
+export const getProductFromDB = (printfulId: string) => {
+    return unstable_cache(
+        async () => getProductFromDBRaw(printfulId),
+        [`product-${printfulId}`],
+        { tags: ["products", `product-${printfulId}`] }
+    )();
+};
+
+/**
+ * Get all brands (categories with parent ID 159) from DB (UNCACHED version)
+ */
+async function getBrandsFromDBRaw(): Promise<any[]> {
     if (!db) return [];
 
     try {
@@ -564,6 +619,15 @@ export async function getBrandsFromDB(): Promise<any[]> {
         return [];
     }
 }
+
+/**
+ * Cached version of getBrandsFromDB
+ */
+export const getBrandsFromDB = unstable_cache(
+    async () => getBrandsFromDBRaw(),
+    ["brands-list"],
+    { tags: ["categories"] }
+);
 
 /**
  * Sync a single product by its Printful ID

@@ -6,7 +6,8 @@ import { PrintfulProduct } from "../../src/types";
 import ProductGrid from "../../src/components/ProductGrid";
 import { Metadata } from 'next';
 
-export const dynamic = 'force-dynamic';
+// Caching is now handled by unstable_cache in src/lib/sync-products.ts
+// export const dynamic = 'force-dynamic';
 
 type Props = {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>

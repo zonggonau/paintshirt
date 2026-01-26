@@ -5,7 +5,7 @@ import Layout from "../src/components/Layout";
 import Script from "next/script";
 
 export const metadata: Metadata = {
-  title: "PrintfulTshirt - Dropshipping Store",
+  title: "Printful T-shirt - Beautiful Design",
   description: "High quality print-on-demand products powered by Printful",
 };
 

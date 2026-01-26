@@ -158,3 +158,4 @@ docker exec -it dropshiping-postgres psql -U postgres
 ALTER USER postgres WITH PASSWORD 'postgres';
 \q
 docker compose restart nextjs
+ docker compose logs nextjs --tail=100

@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { syncProductById, deleteProductByPrintfulId, updateVariantStock } from "@/src/lib/sync-products";
+import { revalidateTag as nextRevalidateTag } from "next/cache";
+
+// Cast to any because of weird lint error in this environment
+const revalidateTag = nextRevalidateTag as any;
 
 /**
  * Printful Webhook Handler
@@ -52,6 +56,10 @@ export async function POST(req: NextRequest) {
                     } else {
                         console.log(`[Webhook] Syncing product ${printfulId} (Trigger: ${type})...`);
                         await syncProductById(printfulId);
+
+                        // Revalidate cache
+                        revalidateTag("products");
+                        revalidateTag(`product-${printfulId}`);
                     }
                 }
                 break;
@@ -60,6 +68,9 @@ export async function POST(req: NextRequest) {
                 if (data?.sync_product?.id) {
                     console.log(`[Webhook] Deleting product ${data.sync_product.id}...`);
                     await deleteProductByPrintfulId(data.sync_product.id);
+                    // Revalidate cache
+                    revalidateTag("products");
+                    revalidateTag(`product-${data.sync_product.id}`);
                 }
                 break;
 
@@ -67,6 +78,8 @@ export async function POST(req: NextRequest) {
                 if (data?.sync_variant_id !== undefined) {
                     console.log(`[Webhook] Updating stock for variant ${data.sync_variant_id}: ${data.in_stock}`);
                     await updateVariantStock(data.sync_variant_id, data.in_stock);
+                    // Revalidate products as stock change affects product listing/detail
+                    revalidateTag("products");
                 }
                 break;
 

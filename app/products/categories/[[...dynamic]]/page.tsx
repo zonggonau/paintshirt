@@ -9,7 +9,8 @@ import { getProductFromDB, getProductsFromDB, getProductsForUI, getCategoriesFro
 import { formatVariantName } from "../../../../src/lib/format-variant-name";
 import { PrintfulProduct } from "../../../../src/types";
 
-export const dynamic = 'force-dynamic';
+// Caching is now handled by unstable_cache in src/lib/sync-products.ts
+// export const dynamic = 'force-dynamic';
 
 interface PageProps {
     params: Promise<{ dynamic?: string[] }>;
@@ -72,7 +73,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         const product = await getProductFromDB(productId);
         if (!product) return { title: "Product Not Found" };
 
-        const title = `${product.name} | TEE-SOCIETY`;
+        const title = `${product.name} | Printful T-Shirt`;
         // Strip HTML tags from description for metadata
         const description = product.description?.replace(/<[^>]*>?/gm, '').substring(0, 160) || `Buy ${product.name} at TEE-SOCIETY.`;
 
@@ -204,7 +205,7 @@ export default async function DynamicCategoryPage({ params, searchParams }: Page
                             </ol>
                         </nav>
 
-                        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+                        <div className="bg-white shadow-xl overflow-hidden">
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 p-8 lg:p-12">
                                 <ProductDetailImages product={product} />
                                 <ProductDetailClient product={product} />
@@ -221,7 +222,7 @@ export default async function DynamicCategoryPage({ params, searchParams }: Page
                             )}
                         </div>
 
-                        <div className="mt-12 bg-white rounded-2xl shadow-lg p-8">
+                        <div className="mt-12 bg-white shadow-lg p-8">
                             <h2 className="text-2xl font-bold text-gray-900 mb-6">Product Features</h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                 <FeatureItem title="Premium Quality" desc="Top-tier materials" color="green" />

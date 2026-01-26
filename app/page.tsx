@@ -214,6 +214,13 @@ export default async function Home() {
               </p>
             </div>
 
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-8 max-w-2xl mx-auto text-center">
+                <p className="text-red-700 font-semibold mb-2">{error}</p>
+                <p className="text-red-600 text-sm">Please check database connection in production.</p>
+              </div>
+            )}
+
             {collectionsError && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-8 max-w-2xl mx-auto">
                 <p className="text-yellow-700 text-center">{collectionsError}</p>

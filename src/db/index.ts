@@ -4,33 +4,33 @@ import * as schema from "./schema";
 
 // Use a dummy URL during build if not provided to prevent Drizzle initialization errors
 // If in Docker, use 'postgres' as host, otherwise 'localhost'
-const isDocker = process.env.DATABASE_URL?.includes("postgres:5432");
-const dummyHost = isDocker ? "postgres" : "localhost";
-const connectionString = process.env.DATABASE_URL || `postgresql://postgres:postgres@${dummyHost}:5432/postgres`;
+const connectionString = process.env.DATABASE_URL;
 
-if (!process.env.DATABASE_URL) {
+if (!connectionString) {
     if (process.env.NODE_ENV === "production") {
         console.error("CRITICAL: DATABASE_URL is not defined in production environment.");
     } else {
-        console.warn(`[DB] Database URL missing. Using dummy connection on ${dummyHost}.`);
+        console.warn("[DB] DATABASE_URL is missing. Database features will fail.");
     }
+} else {
+    // Mask password for safe logging
+    const maskedUrl = connectionString.replace(/:([^:@]+)@/, ":****@");
+    console.log(`[DB] Initializing connection to: ${maskedUrl}`);
 }
 
 // Create postgres client
-// For production: Use connection pooling with max connections
-// For development: Use default settings
 const client = connectionString
     ? postgres(connectionString, {
         max: process.env.NODE_ENV === "production" ? 10 : 1,
         idle_timeout: 20,
         connect_timeout: 10,
     })
-    : (null as unknown as ReturnType<typeof postgres>);
+    : null;
 
-// Create drizzle database instance with schema
+// Create drizzle database instance
 export const db = client
     ? drizzle(client, { schema })
-    : (null as unknown as ReturnType<typeof drizzle>);
+    : null as any;
 
 // Helper function to check if database is available
 export function isDatabaseAvailable(): boolean {

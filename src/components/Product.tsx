@@ -57,7 +57,7 @@ const Product = (product: any) => {
 
     return (
         <Link href={productUrl}>
-            <article className="group relative bg-white rounded-2xl overflow-hidden hover-lift shadow-sm hover:shadow-xl transition-all duration-300 animate-scale-in cursor-pointer h-full flex flex-col border border-gray-100">
+            <article className="group relative bg-white overflow-hidden hover-lift shadow-sm hover:shadow-xl transition-all duration-300 animate-scale-in cursor-pointer h-full flex flex-col border border-gray-100">
                 <button
                     onClick={addToWishlist}
                     aria-label="Add to wishlist"
