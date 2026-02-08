@@ -58,12 +58,12 @@ export default async function RootLayout({
           </Layout>
         </WishlistProvider>
 
-        {/* Google Analytics 4 - Only in production */}
-        {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && (
+        {/* Google Analytics & Google Ads */}
+        {(process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || process.env.NEXT_PUBLIC_GOOGLE_ADS_ID) && (
           <>
             <Script
               strategy="afterInteractive"
-              src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID}`}
+              src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || process.env.NEXT_PUBLIC_GOOGLE_ADS_ID}`}
             />
             <Script
               id="google-analytics"
@@ -73,13 +73,40 @@ export default async function RootLayout({
                   window.dataLayer = window.dataLayer || [];
                   function gtag(){dataLayer.push(arguments);}
                   gtag('js', new Date());
+                  
+                  ${process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ? `
                   gtag('config', '${process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID}', {
                     page_path: window.location.pathname,
-                  });
+                  });` : ''}
+                  
+                  ${process.env.NEXT_PUBLIC_GOOGLE_ADS_ID ? `
+                  gtag('config', '${process.env.NEXT_PUBLIC_GOOGLE_ADS_ID}');` : ''}
                 `,
               }}
             />
           </>
+        )}
+
+        {/* Google Ads Conversion - Snipcart Integration */}
+        {process.env.NEXT_PUBLIC_GOOGLE_ADS_ID && (
+          <Script
+            id="google-ads-conversion"
+            strategy="afterInteractive"
+            dangerouslySetInnerHTML={{
+              __html: `
+                document.addEventListener('snipcart.ready', function() {
+                  Snipcart.events.on('order.completed', function(order) {
+                    gtag('event', 'conversion', {
+                      'send_to': '${process.env.NEXT_PUBLIC_GOOGLE_ADS_ID}/JmLMCK2Iv_QbEKOz-eNC',
+                      'value': order.total,
+                      'currency': order.currency,
+                      'transaction_id': order.invoiceNumber
+                    });
+                  });
+                });
+              `,
+            }}
+          />
         )}
 
         <div
