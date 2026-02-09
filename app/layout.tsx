@@ -5,8 +5,46 @@ import Layout from "../src/components/Layout";
 import Script from "next/script";
 
 export const metadata: Metadata = {
-  title: "Printful T-shirt - Beautiful Design",
-  description: "High quality print-on-demand products powered by Printful",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://printfultshirt.com'),
+  title: {
+    default: "Printful T-shirt - Premium Custom Apparel",
+    template: "%s | Printful T-shirt"
+  },
+  description: "Discover high-quality print-on-demand t-shirts, hoodies, and accessories. Unique designs, premium materials, and worldwide shipping powered by Printful.",
+  keywords: ["custom t-shirts", "print on demand", "premium apparel", "unique designs", "clothing store"],
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: '/',
+    siteName: 'Printful T-shirt',
+    title: 'Printful T-shirt - Premium Custom Apparel',
+    description: 'Discover high-quality print-on-demand t-shirts, hoodies, and accessories.',
+    images: [
+      {
+        url: '/og-image.jpg', // Ensure this aligns with an actual asset or dynamic generation
+        width: 1200,
+        height: 630,
+        alt: 'Printful T-shirt Store',
+      }
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Printful T-shirt - Premium Custom Apparel',
+    description: 'Discover high-quality print-on-demand t-shirts, hoodies, and accessories.',
+    creator: '@printful', // Update with actual handle if available
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
 };
 
 import { getRawCategoriesFromDB } from "../src/lib/sync-products";

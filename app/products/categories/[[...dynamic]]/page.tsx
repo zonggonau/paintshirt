@@ -55,15 +55,29 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const { dynamic: slugs } = await params;
 
     if (!slugs || slugs.length < 2) {
-        return { title: "Categories | PrintfulTshirt" };
+        return {
+            title: "Categories | Printful T-shirt",
+            description: "Browse our extensive collection of print-on-demand products."
+        };
     }
 
     // Category Page: [categoryId, categorySlug]
     if (slugs.length === 2) {
         const title = slugs[1].split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        const url = `/products/categories/${slugs.join('/')}`;
+        
         return {
-            title: `${title} | PrintfulTshirt`,
-            description: `Browse our collection of ${title} products.`
+            title: `${title} | Printful T-shirt`,
+            description: `Shop the best ${title} designs at Printful T-shirt. High quality, custom printed apparel and accessories.`,
+            openGraph: {
+                title: `${title} - Premium Collection`,
+                description: `Explore our unique ${title} collection.`,
+                url,
+                type: 'website',
+            },
+            alternates: {
+                canonical: url,
+            }
         };
     }
 
@@ -75,16 +89,27 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
         const title = `${product.name} | Printful T-Shirt`;
         // Strip HTML tags from description for metadata
-        const description = product.description?.replace(/<[^>]*>?/gm, '').substring(0, 160) || `Buy ${product.name} at TEE-SOCIETY.`;
+        const description = product.description?.replace(/<[^>]*>?/gm, '').substring(0, 160) || `Buy ${product.name} at Printful T-shirt. Premium quality custom print.`;
 
-        // Find best image for OG
-        let imageUrl = product.thumbnail_url;
-        if (!imageUrl && product.variants && product.variants.length > 0) {
-            const firstVariant = product.variants[0];
-            // Need to handle potential inconsistent data structure
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            imageUrl = (firstVariant as any).files?.find((f: any) => f.type === 'preview')?.preview_url || (firstVariant as any).preview_url;
+        // Find best images for OG
+        const images: any[] = [];
+        
+        // Thumbnail first
+        if (product.thumbnail_url) {
+            images.push({ url: product.thumbnail_url, width: 800, height: 800, alt: product.name });
         }
+
+        // Add variants previews
+        if (product.variants && product.variants.length > 0) {
+            product.variants.slice(0, 3).forEach((v: any) => {
+                 const previewUrl = v.files?.find((f: any) => f.type === 'preview')?.preview_url || v.preview_url;
+                 if (previewUrl && previewUrl !== product.thumbnail_url) {
+                     images.push({ url: previewUrl, width: 800, height: 800, alt: `${product.name} - ${v.name}` });
+                 }
+            });
+        }
+
+        const url = `/products/categories/${slugs.join('/')}`;
 
         return {
             title,
@@ -92,20 +117,24 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
             openGraph: {
                 title,
                 description,
-                images: imageUrl ? [{ url: imageUrl, width: 800, height: 800, alt: product.name }] : [],
-                url: `/products/categories/${slugs.join('/')}`,
-                type: 'website',
+                images: images,
+                url,
+                type: 'website', // Use 'website' or 'article' as 'product' is not a standard OG type, though typically handled via schema
+                siteName: 'Printful T-shirt',
             },
             twitter: {
                 card: 'summary_large_image',
                 title,
                 description,
-                images: imageUrl ? [imageUrl] : [],
+                images: images.map(img => img.url),
+            },
+            alternates: {
+                canonical: url,
             }
         };
     }
 
-    return { title: "PrintfulTshirt" };
+    return { title: "Printful T-shirt" };
 }
 
 // ============================================================================
@@ -134,28 +163,54 @@ export default async function DynamicCategoryPage({ params, searchParams }: Page
         ]);
 
         const title = categorySlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        const categoryUrl = `${process.env.NEXT_PUBLIC_SITE_URL || ''}/products/categories/${categoryId}/${categorySlug}`;
+
+        // Breadcrumb Schema for Category
+        const breadcrumbSchema = {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [{
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Home",
+                "item": process.env.NEXT_PUBLIC_SITE_URL || "https://printfultshirt.com"
+            }, {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "Products",
+                "item": `${process.env.NEXT_PUBLIC_SITE_URL || "https://printfultshirt.com"}/products`
+            }, {
+                "@type": "ListItem",
+                "position": 3,
+                "name": title,
+                "item": categoryUrl
+            }]
+        };
 
         return (
-            <div className="bg-gray-50 min-h-screen py-12">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <nav className="flex mb-8 text-sm text-gray-500" aria-label="Breadcrumb">
-                        <ol className="flex items-center space-x-2">
-                            <li><Link href="/" className="hover:text-indigo-600">Home</Link></li>
-                            <li className="flex items-center space-x-2"><span>/</span><Link href="/products" className="hover:text-indigo-600">Products</Link></li>
-                            <li className="flex items-center space-x-2"><span>/</span><span className="text-gray-900 font-medium">{title}</span></li>
-                        </ol>
-                    </nav>
+            <>
+                <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
+                <div className="bg-gray-50 min-h-screen py-12">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <nav className="flex mb-8 text-sm text-gray-500" aria-label="Breadcrumb">
+                            <ol className="flex items-center space-x-2">
+                                <li><Link href="/" className="hover:text-indigo-600">Home</Link></li>
+                                <li className="flex items-center space-x-2"><span>/</span><Link href="/products" className="hover:text-indigo-600">Products</Link></li>
+                                <li className="flex items-center space-x-2"><span>/</span><span className="text-gray-900 font-medium">{title}</span></li>
+                            </ol>
+                        </nav>
 
-                    <div className="text-center mb-12">
-                        <h1 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4">{title}</h1>
-                        <p className="text-lg text-gray-600 max-w-2xl mx-auto">Showing all products in our {title} collection.</p>
+                        <div className="text-center mb-12">
+                            <h1 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4">{title}</h1>
+                            <p className="text-lg text-gray-600 max-w-2xl mx-auto">Showing all products in our {title} collection.</p>
+                        </div>
+
+                        {error && <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-8 text-center border border-red-200">{error}</div>}
+
+                        <ProductGrid products={products} totalProducts={total} currentPage={page} categoryMap={categoryMap} />
                     </div>
-
-                    {error && <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-8 text-center border border-red-200">{error}</div>}
-
-                    <ProductGrid products={products} totalProducts={total} currentPage={page} categoryMap={categoryMap} />
                 </div>
-            </div>
+            </>
         );
     }
 
@@ -171,23 +226,78 @@ export default async function DynamicCategoryPage({ params, searchParams }: Page
 
         if (!product) notFound();
 
-        const structuredData = {
+        // Calculate Price Range
+        const prices = product.variants.map((v: any) => Number(v.retail_price));
+        const minPrice = Math.min(...prices);
+        const maxPrice = Math.max(...prices);
+        const currency = product.variants[0]?.currency || "USD";
+        const inStock = product.variants.some((v: any) => v.in_stock !== false);
+        
+        // Collect Images
+        const images = [product.thumbnail_url];
+        product.variants.forEach((v: any) => {
+            const previewUrl = v.files?.find((f: any) => f.type === 'preview')?.preview_url || v.preview_url;
+            if (previewUrl && !images.includes(previewUrl)) {
+                 images.push(previewUrl);
+            }
+        });
+
+        // Product Schema
+        const productSchema = {
             "@context": "https://schema.org",
             "@type": "Product",
             name: product.name,
-            description: product.description,
+            description: product.description?.replace(/<[^>]*>?/gm, '').substring(0, 500), // Clean description
+            image: images.filter(Boolean),
             sku: product.id,
+            mpn: product.external_id, // Manufacturer Part Number
+            brand: {
+                "@type": "Brand",
+                name: "Printful" 
+            },
             offers: {
-                "@type": "Offer",
-                priceCurrency: "USD",
-                price: product.variants[0]?.retail_price,
-                availability: "https://schema.org/InStock",
+                "@type": "AggregateOffer",
+                priceCurrency: currency,
+                lowPrice: minPrice,
+                highPrice: maxPrice,
+                offerCount: product.variants.length,
+                availability: inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+                priceValidUntil: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0], // 1 year from now
+                url: `${process.env.NEXT_PUBLIC_SITE_URL || ''}/products/categories/${categoryId}/${categorySlug}/${productId}/${slugs[3]}`
             }
+        };
+
+        // Breadcrumb Schema
+        const breadcrumbSchema = {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [{
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Home",
+                "item": process.env.NEXT_PUBLIC_SITE_URL || "https://printfultshirt.com"
+            }, {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "Products",
+                "item": `${process.env.NEXT_PUBLIC_SITE_URL || "https://printfultshirt.com"}/products`
+            }, {
+                "@type": "ListItem",
+                "position": 3,
+                "name": product.category?.name || "Category",
+                "item": `${process.env.NEXT_PUBLIC_SITE_URL || "https://printfultshirt.com"}/products/categories/${categoryId}/${categorySlug}`
+            }, {
+                "@type": "ListItem",
+                "position": 4,
+                "name": product.name,
+                "item": `${process.env.NEXT_PUBLIC_SITE_URL || "https://printfultshirt.com"}/products/categories/${categoryId}/${categorySlug}/${productId}/${slugs[3]}`
+            }]
         };
 
         return (
             <>
-                <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
+                <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }} />
+                <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
 
                 <div className="min-h-screen bg-gray-50 py-12">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -201,11 +311,11 @@ export default async function DynamicCategoryPage({ params, searchParams }: Page
                                     </Link>
                                 </li>
                                 <li>/</li>
-                                <li className="text-gray-900 font-medium">{product.name}</li>
+                                <li className="text-gray-900 font-medium truncate max-w-[200px] md:max-w-xs">{product.name}</li>
                             </ol>
                         </nav>
 
-                        <div className="bg-white shadow-xl overflow-hidden">
+                        <div className="bg-white shadow-xl overflow-hidden rounded-2xl">
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 p-8 lg:p-12">
                                 <ProductDetailImages product={product} />
                                 <ProductDetailClient product={product} />
@@ -222,7 +332,7 @@ export default async function DynamicCategoryPage({ params, searchParams }: Page
                             )}
                         </div>
 
-                        <div className="mt-12 bg-white shadow-lg p-8">
+                        <div className="mt-12 bg-white shadow-lg p-8 rounded-2xl">
                             <h2 className="text-2xl font-bold text-gray-900 mb-6">Product Features</h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                 <FeatureItem title="Premium Quality" desc="Top-tier materials" color="green" />
@@ -233,7 +343,7 @@ export default async function DynamicCategoryPage({ params, searchParams }: Page
                         </div>
                     </div>
 
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 mt-12">
                         <RelatedProducts currentProduct={product} allProducts={allProducts} />
                     </div>
                 </div >
